@@ -4,7 +4,7 @@ Interaktywne ćwiczenia do polskiego egzaminu na **świadectwo klasy A / pozwole
 kategorii 1**, oparte na puli UKE „Kategoria 1, Wersja 3" (521 pytań) i na
 rozporządzeniu Ministra Cyfryzacji z 19.03.2026 (**Dz.U. 2026 poz. 406**).
 
-**→ [tdi.github.io/kf-pomoce](https://tdi.github.io/kf-pomoce/)**
+**→ [blog.dwornikowski.com/kf-pomoce](https://blog.dwornikowski.com/kf-pomoce/)**
 
 Powstały przy moich własnych przygotowaniach; egzamin zdany 4 września 2026 r.
 Udostępniam je, bo w sieci jest dużo quizów, a mało wyjaśnień *dlaczego*.
