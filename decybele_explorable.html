@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decybele — skąd się bierze ×10 i ×20</title>
+<!--
+  ENGRAM EXPLORABLE
+  node:        decybele-10log-20log
+  topic:       krotkofalarstwo-a
+  generated:   2026-07-30
+  scaffold:    novice dla treści radiowej (worked drive przed swobodną manipulacją — klauzula 2);
+               matematyka bez protekcjonalności — logarytm traktowany jako znany
+  interests:   inżynieria oprogramowania / systemy rozproszone, Kubernetes
+               (jedna analogia niosąca: skala dB = skala logarytmiczna na wykresie latencji;
+                łańcuch wzmocnień = łańcuch mnożników przepustowości)
+  misconceptions targeted:
+    1. liczba decybeli traktowana jak mnożnik (13 dBW -> 10 W x 3 = 30 W zamiast 10 W x 2 = 20 W)
+    2. zacinanie się na liczeniu 10^1,3 w pamięci zamiast składania z drabinki 10/3
+    3. "napięcie razy 10" mylone z dwudziestką we wzorze 20*log
+  self-contained: brak CDN, brak fontów zewnętrznych, brak fetch, brak obrazów. Otwierane z file://
+-->
+<style>
+  :root{
+    --bg:#fbfaf7; --panel:#ffffff; --ink:#1a1c1f; --ink-dim:#5a6069; --line:#dcdcd6;
+    --accent:#7a4bd6; --accent-soft:#efe7ff;
+    --pow:#c2410c;      /* moc */
+    --volt:#1d4ed8;     /* napięcie */
+    --db:#0f766e;       /* decybele */
+    --ok:#166534; --bad:#b91c1c;
+    --ok-soft:#e3f5e7; --bad-soft:#fdeaea;
+    --grid:#e8e8e2;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root[data-theme="auto"]{
+      --bg:#14161a; --panel:#1c1f25; --ink:#e9e9e4; --ink-dim:#a0a6b0; --line:#333842;
+      --accent:#b79bff; --accent-soft:#2a2340;
+      --pow:#fb923c; --volt:#7dabff; --db:#4fd1c5;
+      --ok:#4ade80; --bad:#f87171;
+      --ok-soft:#16281c; --bad-soft:#2e1a1a;
+      --grid:#262a31;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14161a; --panel:#1c1f25; --ink:#e9e9e4; --ink-dim:#a0a6b0; --line:#333842;
+    --accent:#b79bff; --accent-soft:#2a2340;
+    --pow:#fb923c; --volt:#7dabff; --db:#4fd1c5;
+    --ok:#4ade80; --bad:#f87171;
+    --ok-soft:#16281c; --bad-soft:#2e1a1a;
+    --grid:#262a31;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:17px}
+  main{max-width:840px;margin:0 auto;padding:24px 18px 90px}
+  h1{font-size:1.55rem;line-height:1.25;margin:.2em 0 .1em}
+  h2{font-size:1.18rem;margin:2.4em 0 .4em;padding-top:.7em;border-top:1px solid var(--line)}
+  h3{font-size:1rem;margin:1.4em 0 .3em}
+  p{margin:.6em 0}
+  .lead{color:var(--ink-dim)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+  .step-tag{font:600 .72rem/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:.35em}
+  canvas{width:100%;display:block;border-radius:6px;touch-action:none}
+  #cvScale{height:170px}
+  #cvLine{height:130px}
+  .ctrl{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}
+  .ctrl label{min-width:190px;font:600 .88rem/1.3 var(--sans)}
+  .ctrl input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
+  .val{font:600 .92rem/1 var(--mono);min-width:120px;text-align:right}
+  button{font:inherit;font-size:.9rem;padding:7px 13px;border-radius:7px;border:1px solid var(--line);
+         background:var(--panel);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  button[disabled]{opacity:.45;cursor:not-allowed}
+  button.sel{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+  .choices{display:flex;gap:8px;flex-wrap:wrap;margin:.3em 0 .8em}
+  .readout{font:.92rem/1.6 var(--mono);background:var(--accent-soft);border-radius:7px;padding:9px 12px;margin:10px 0}
+  .verdict{border-left:4px solid var(--accent);padding:8px 12px;margin:10px 0;background:var(--accent-soft);border-radius:0 7px 7px 0}
+  .good{border-left-color:var(--ok);background:var(--ok-soft)}
+  .wrong{border-left-color:var(--bad);background:var(--bad-soft)}
+  .ok{color:var(--ok);font-weight:700}
+  .bad{color:var(--bad);font-weight:700}
+  .strike{text-decoration:line-through;color:var(--bad)}
+  textarea{width:100%;min-height:92px;font:inherit;font-size:.95rem;padding:9px;border-radius:7px;
+           border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+  input[type=text],input[type=number]{font:inherit;font-size:.95rem;padding:6px 9px;border-radius:7px;
+           border:1px solid var(--line);background:var(--bg);color:var(--ink);width:120px}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font:.85rem/1.4 var(--sans);margin:6px 0 2px;color:var(--ink-dim)}
+  .k-pow{color:var(--pow);font-weight:700} .k-volt{color:var(--volt);font-weight:700} .k-db{color:var(--db);font-weight:700}
+  .locknote{color:var(--ink-dim);font-style:italic;font-size:.92rem}
+  .aside{border:1px dashed var(--line);border-radius:8px;padding:10px 13px;margin:14px 0;font-size:.94rem;color:var(--ink-dim)}
+  .aside b{color:var(--ink)}
+  .themebtn{position:fixed;top:10px;right:10px;z-index:9;font-size:.8rem;padding:5px 10px}
+  [hidden]{display:none !important}
+  .formula{font:600 1.02rem/1.8 var(--mono);background:var(--accent-soft);padding:8px 12px;border-radius:7px;display:block;margin:8px 0}
+  ul{margin:.4em 0 .4em 1.1em;padding:0} li{margin:.25em 0}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  /* dwie kolumny łańcucha */
+  table.chain{width:100%;border-collapse:collapse;font:.92rem/1.5 var(--mono);margin-top:6px}
+  table.chain th{font:600 .78rem/1.3 var(--sans);text-transform:uppercase;letter-spacing:.06em;
+                 color:var(--ink-dim);text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)}
+  table.chain td{padding:5px 8px;border-bottom:1px solid var(--grid);vertical-align:top}
+  table.chain td.stage{font-family:var(--sans);font-size:.88rem;color:var(--ink-dim);width:34%}
+  table.chain td.w{color:var(--pow);font-weight:700;width:33%}
+  table.chain td.d{color:var(--db);font-weight:700;width:33%}
+  table.chain tr.sum td{border-bottom:none;padding-top:9px;font-weight:700}
+  .op{color:var(--ink-dim);font-weight:400}
+  /* drabinka */
+  table.lad{border-collapse:collapse;font:.9rem/1.45 var(--mono);margin:8px 0}
+  table.lad td,table.lad th{padding:3px 12px 3px 0;text-align:left}
+  table.lad th{font:600 .78rem/1.3 var(--sans);color:var(--ink-dim);text-transform:uppercase;letter-spacing:.06em}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;min-height:34px;align-items:center;
+         background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:7px 9px;margin:8px 0}
+  .chip{font:600 .85rem/1 var(--mono);padding:6px 9px;border-radius:6px;background:var(--accent-soft);
+        border:1px solid var(--accent);color:var(--ink)}
+  .bars{margin:10px 0}
+  .bar{height:26px;border-radius:5px;display:flex;align-items:center;justify-content:flex-end;
+       padding-right:8px;font:700 .82rem/1 var(--mono);color:#fff;overflow:hidden;white-space:nowrap;
+       transition:width .18s linear}
+  .bar.in{background:var(--volt)}
+  .bar.out{background:var(--db)}
+  .bar.heat{background:var(--bad)}
+  .barrow{display:flex;align-items:center;gap:10px;margin:6px 0}
+  .barrow .lbl{min-width:190px;font:600 .85rem/1.3 var(--sans)}
+  .bartrack{flex:1;background:var(--grid);border-radius:5px;overflow:hidden}
+  @media (prefers-reduced-motion: reduce){ .bar{transition:none} }
+  .big{font:700 1.15rem/1.4 var(--mono)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:640px){ .two{grid-template-columns:1fr} .ctrl label{min-width:100%} }
+</style>
+</head>
+<body>
+<button class="themebtn" id="themebtn" aria-label="Przełącz motyw jasny/ciemny">motyw: auto</button>
+<main>
+
+<h1>Decybele: o co chodzi z tym <span class="k-pow">×10</span> i <span class="k-volt">×20</span></h1>
+<p class="lead">Jedna strona, jedno pytanie: dlaczego dla mocy piszemy 10·log, a dla napięcia 20·log — i skąd naprawdę bierze się ta dwudziestka. Reszta (drabinka 3/10 dB, tłumienie fidera) to narzędzia, które z tego wypadną.</p>
+
+<!-- ══════════════ KLAUZULA 1: BRAMKA PREDYKCJI ══════════════ -->
+<section class="panel" id="gate">
+  <span class="step-tag">Zanim cokolwiek przeczytasz</span>
+  <p>Dwie sytuacje. W obu coś rośnie „dziesięciokrotnie”.</p>
+  <ul>
+    <li><b class="k-volt">A.</b> Napięcie na wyjściu wzrosło <b>10×</b> (rezystancja bez zmian). Ile to decybeli?</li>
+    <li><b class="k-pow">B.</b> Moc na wyjściu wzrosła <b>10×</b>. Ile to decybeli?</li>
+  </ul>
+  <p class="lead">Zgadnij. Chodzi o zapis zobowiązania, nie o trafienie — wrócimy do twoich dwóch liczb dokładnie w momencie, w którym się rozstrzygną.</p>
+  <div class="ctrl">
+    <label for="gA">A. napięcie ×10 to…</label>
+    <input type="number" id="gA" step="any" inputmode="decimal" aria-describedby="gunit"> <span id="gunit">dB</span>
+  </div>
+  <div class="ctrl">
+    <label for="gB">B. moc ×10 to…</label>
+    <input type="number" id="gB" step="any" inputmode="decimal"> <span>dB</span>
+  </div>
+  <button id="gateBtn">Zapisz obie liczby i odblokuj stronę</button>
+  <p class="locknote" id="gateHint">Obie rubryki muszą być wypełnione. Bez zobowiązania strona się nie otwiera.</p>
+</section>
+
+<div id="bodywrap" hidden>
+
+<!-- ══════════════ 1. PO CO W OGÓLE DECYBEL ══════════════ -->
+<h2>1. Po co komu decybel — czyli co się dzieje z osią</h2>
+<p>Na osi liniowej moc od 1 W do 1500 W wygląda tak, że wszystko poniżej stu watów zlepia się w jedną kreskę przy zerze. Znasz ten problem z wykresów latencji: p50 = 2 ms i p99 = 900 ms na osi liniowej — p50 nie istnieje.</p>
+<p>Te same pięć mocy, dwie skale. Przełącz i patrz, co się dzieje ze zlepkiem po lewej.</p>
+
+<div class="panel">
+  <span class="step-tag">Model 1 — ta sama piątka liczb, dwie osie</span>
+  <div class="choices" role="group" aria-label="Wybór skali">
+    <button id="btnLin" class="sel">oś liniowa (waty)</button>
+    <button id="btnDb">oś decybelowa (dBW)</button>
+  </div>
+  <canvas id="cvScale" aria-label="Oś z zaznaczonymi mocami 1, 5, 25, 100 i 1500 watów, przełączana między skalą liniową a decybelową"></canvas>
+  <div class="readout" id="scaleRead" aria-live="polite"></div>
+</div>
+
+<div class="aside">
+  <b>dBW</b> = decybele odniesione do 1 W. Sam <b>dB</b> to czysty stosunek dwóch rzeczy (ile razy), bez punktu zaczepienia. <b>dBm</b> — to samo, ale odniesienie to 1 mW. Dlatego „wzmocnienie 10 dB” ma sens bez dodatków, a „moc 10 dB” nie ma sensu — musi być 10 dBW albo 10 dBm.
+</div>
+
+<!-- ── 1b. ŁAŃCUCH: dodawanie kontra mnożenie ── -->
+<h3>Drugi powód: łańcuch, w którym dodajesz zamiast mnożyć</h3>
+<p>Tor nadawczy to ciąg mnożników: kabel przepuszcza 0,50 tego co dostał, wzmacniacz robi ×10, drugi kabel ×0,79. W watach musisz to wymnożyć. W decybelach — dodać. To jest cała transakcja, którą kupujesz, przechodząc na logarytm.</p>
+
+<div class="panel">
+  <span class="step-tag">Model 2 — tor nadawczy · najpierw przebieg prowadzony</span>
+
+  <div id="preTouch">
+    <p><b>Predykcja przed dotknięciem czegokolwiek.</b> Gdybyś wymienił kabel z tłumieniem −3 dB na kabel −6 dB, to ze 100 W na wejściu do kabla wyszłoby:</p>
+    <div class="choices" role="group" aria-label="Predykcja przed manipulacją">
+      <button class="ptBtn" data-v="50">50 W</button>
+      <button class="ptBtn" data-v="25">25 W</button>
+      <button class="ptBtn" data-v="94">94 W</button>
+    </div>
+    <div id="ptOut" hidden></div>
+  </div>
+
+  <div id="drive" hidden>
+    <p><b>Przebieg prowadzony.</b> Cztery elementy toru, po jednym kroku. Nie licz kalkulatorem — zgaduj i patrz, gdzie ci ucieka.</p>
+    <div class="readout" id="driveState">Start: TRX oddaje <b class="k-pow">100 W</b>, czyli <b class="k-db">20 dBW</b>.</div>
+    <div id="q1">
+      <p><b>Krok 1.</b> Sygnał wchodzi w kabel o tłumieniu <b>−3 dB</b>. Ile watów z niego wyjdzie?</p>
+      <div class="choices" role="group" aria-label="Krok 1">
+        <button class="dq" data-q="1" data-v="97">97 W</button>
+        <button class="dq" data-q="1" data-v="50">50 W</button>
+        <button class="dq" data-q="1" data-v="33">33 W</button>
+      </div>
+      <div id="a1" hidden></div>
+    </div>
+    <div id="q2" hidden>
+      <p><b>Krok 2.</b> Te 50 W wchodzi we wzmacniacz <b>+10 dB</b>. Na wyjściu:</p>
+      <div class="choices" role="group" aria-label="Krok 2">
+        <button class="dq" data-q="2" data-v="60">60 W</button>
+        <button class="dq" data-q="2" data-v="150">150 W</button>
+        <button class="dq" data-q="2" data-v="500">500 W</button>
+      </div>
+      <div id="a2" hidden></div>
+    </div>
+    <div id="q3" hidden>
+      <p><b>Krok 3.</b> Ostatni kabel do anteny: <b>−1 dB</b>. Z 500 W zostanie:</p>
+      <div class="choices" role="group" aria-label="Krok 3">
+        <button class="dq" data-q="3" data-v="499">499 W</button>
+        <button class="dq" data-q="3" data-v="400">ok. 400 W</button>
+        <button class="dq" data-q="3" data-v="250">250 W</button>
+      </div>
+      <div id="a3" hidden></div>
+    </div>
+  </div>
+
+  <div id="chainFree" hidden>
+    <p><b>Teraz suwaki są twoje.</b> Lewa kolumna mnoży, prawa dodaje. Ruszaj jednym elementem i obserwuj obie naraz.</p>
+    <div class="ctrl"><label for="sP">moc TRX</label><input type="range" id="sP" min="1" max="400" step="1" value="100"><span class="val" id="vP"></span></div>
+    <div class="ctrl"><label for="sC1">kabel 1 — tłumienie</label><input type="range" id="sC1" min="0" max="10" step="0.5" value="3"><span class="val" id="vC1"></span></div>
+    <div class="ctrl"><label for="sA">wzmacniacz — wzmocnienie</label><input type="range" id="sA" min="0" max="20" step="0.5" value="10"><span class="val" id="vA"></span></div>
+    <div class="ctrl"><label for="sC2">kabel 2 — tłumienie</label><input type="range" id="sC2" min="0" max="6" step="0.5" value="1"><span class="val" id="vC2"></span></div>
+    <table class="chain">
+      <thead><tr><th>etap toru</th><th>waty — <span class="k-pow">mnożenie</span></th><th>decybele — <span class="k-db">dodawanie</span></th></tr></thead>
+      <tbody id="chainBody"></tbody>
+    </table>
+    <div class="readout" id="chainSum" aria-live="polite"></div>
+
+    <div id="selfEx" class="panel" style="margin-top:14px">
+      <span class="step-tag">Wyjaśnij sobie (jedno zdanie)</span>
+      <p><b>Dlaczego, gdy przesuwasz suwak wzmacniacza o stałe +3 dB, prawa kolumna rośnie zawsze o 3, a lewa raz o 50 W, raz o 200 W?</b></p>
+      <label class="sr" for="se1">Twoje wyjaśnienie</label>
+      <textarea id="se1" placeholder="Napisz własnymi słowami, zanim odsłonisz…"></textarea>
+      <button class="revBtn" data-src="se1" data-tgt="se1a" disabled>Odsłoń wyjaśnienie</button>
+      <div id="se1a" class="verdict" hidden>Bo prawa kolumna jest logarytmem lewej. Stały przyrost w dB to stały <b>mnożnik</b>, nie stały dodatek: +3 dB zawsze znaczy „razy dwa”, a „razy dwa” raz oznacza +50 W, raz +200 W — zależnie od tego, od czego mnożysz. Logarytm zamienia mnożenie na dodawanie i to jest jedyny powód istnienia tej skali.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ 2. RDZEŃ: 10 kontra 20 ══════════════ -->
+<h2>2. Rdzeń: dlaczego 10·log dla mocy, a 20·log dla napięcia</h2>
+
+<p>Kluczowa rzecz do zobaczenia: <b>nie ma dwóch definicji decybela</b>. Jest jedna, na mocy. Dwudziestka wypada z niej sama, jak wsadzisz tam napięcie.</p>
+
+<div class="panel">
+  <span class="step-tag">Wyprowadzenie — trzy linijki, każda odsłaniana po zgadnięciu</span>
+
+  <div class="formula">① Definicja:&nbsp; dB = 10 · log( P₂ / P₁ )</div>
+  <p class="lead">Decybel jest <i>zdefiniowany</i> na stosunku mocy. Napięcia w tej definicji w ogóle nie ma.</p>
+
+  <div class="formula">② Fizyka:&nbsp; P = U² / R</div>
+  <p>Więc jeśli R się nie zmienia, a napięcie rośnie <b>k</b> razy, to moc rośnie…</p>
+  <div class="choices" role="group" aria-label="Krok wyprowadzenia">
+    <button class="dv" data-v="k">k razy</button>
+    <button class="dv" data-v="k2">k² razy</button>
+    <button class="dv" data-v="2k">2k razy</button>
+  </div>
+  <div id="dvOut" hidden></div>
+
+  <div id="deriv2" hidden>
+    <div class="formula">③ Podstawiamy P₂/P₁ = k² :&nbsp; dB = 10 · log( k² )</div>
+    <p>I teraz jedyna sztuczka w całej sprawie — reguła logarytmu: log(k²) = 2·log(k). Kwadrat wychodzi przed logarytm jako mnożnik 2.</p>
+    <div class="formula">dB = 10 · <b>2</b> · log( k ) = <b class="k-volt">20 · log( U₂ / U₁ )</b></div>
+    <p><b>Dwudziestka to nie druga reguła. To ta sama dziesiątka, tylko z kwadratem wyciągniętym przed logarytm.</b> Gdyby moc zależała od napięcia w trzeciej potędze, mielibyśmy tam 30 — i nikt nie mówiłby o „regule 30”.</p>
+  </div>
+</div>
+
+<div class="panel" id="ratioWidget" hidden>
+  <span class="step-tag">Model 3 — dwie drogi, jeden wynik</span>
+  <p>Ustaw stosunek napięć <b class="k-volt">k = U₂/U₁</b>. Po lewej policzy się przez moc (kwadrat, potem ×10), po prawej przez napięcie (×20). Patrz na obie liczby dB.</p>
+  <div class="ctrl">
+    <label for="sK">k = U₂ / U₁</label>
+    <input type="range" id="sK" min="-2" max="2" step="0.01" value="1">
+    <span class="val" id="vK"></span>
+  </div>
+  <div class="choices" role="group" aria-label="Gotowe wartości k">
+    <button class="kp" data-k="0.5">k = 0,5</button>
+    <button class="kp" data-k="1.4142">k = √2</button>
+    <button class="kp" data-k="2">k = 2</button>
+    <button class="kp" data-k="10">k = 10</button>
+    <button class="kp" data-k="100">k = 100</button>
+  </div>
+
+  <div class="two">
+    <div class="readout" id="pathP" aria-live="polite"></div>
+    <div class="readout" id="pathU"></div>
+  </div>
+  <canvas id="cvLine" aria-label="Oś decybelowa z jednym znacznikiem, do którego dochodzą obie drogi obliczeń"></canvas>
+  <div class="readout" id="lineRead" aria-live="polite"></div>
+</div>
+
+<div class="panel" id="tenTen" hidden>
+  <span class="step-tag">Konsekwencja — i twoje dwie liczby ze startu</span>
+  <p>To samo słowo „dziesięciokrotny”, dwie różne liczby decybeli, bo mierzą <b>różne wielkości</b>:</p>
+  <table class="lad">
+    <tr><th>co rośnie ×10</th><th>stosunek mocy</th><th>wzór</th><th>dB</th></tr>
+    <tr><td class="k-volt">napięcie ×10</td><td>×100</td><td>20·log 10</td><td class="k-db">20 dB</td></tr>
+    <tr><td class="k-pow">moc ×10</td><td>×10</td><td>10·log 10</td><td class="k-db">10 dB</td></tr>
+  </table>
+  <p>Zauważ trzecią kolumnę od lewej: napięcie ×10 <b>to jest</b> moc ×100. A moc ×100 to 20 dB także według wzoru na moc. <b>Obie drogi mówią 20.</b> Nie ma dwóch dwudziestek — jest jedna, opisana raz przez moc, raz przez napięcie.</p>
+  <div class="verdict" id="gateVerdict" aria-live="polite"></div>
+  <p class="lead">Stąd bierze się jedyna pułapka egzaminacyjna z tej pary: zanim policzysz cokolwiek, zapytaj <b>czego dotyczy stosunek</b> — mocy czy napięcia (albo prądu, tam też jest 20, bo P = I²·R).</p>
+</div>
+
+<!-- ══════════════ RETRIEVAL 1 ══════════════ -->
+<div class="panel">
+  <span class="step-tag">Przypomnij sobie — bez patrzenia w górę</span>
+  <p><b>Odtwórz wyprowadzenie dwudziestki w trzech krokach: od definicji decybela do 20·log(U₂/U₁). Nazwij, w którym kroku dokładnie znika kwadrat.</b></p>
+  <label class="sr" for="r1">Twoja odpowiedź</label>
+  <textarea id="r1" placeholder="Pisz z pamięci. Nieudana próba też się liczy — to ona buduje ślad."></textarea>
+  <button class="revBtn" data-src="r1" data-tgt="r1a" disabled>Odsłoń wzorzec</button>
+  <div id="r1a" class="verdict" hidden>
+    ① dB jest zdefiniowany na mocy: dB = 10·log(P₂/P₁). ② Moc zależy od kwadratu napięcia: P = U²/R, więc przy stałym R stosunek mocy = (U₂/U₁)² = k². ③ Podstawiam: 10·log(k²), a reguła log(k²) = 2·log k wyprowadza kwadrat przed logarytm jako czynnik 2 → 10·2·log k = 20·log k. Kwadrat znika w kroku ③, i to nie przez „inną definicję”, tylko przez własność logarytmu.
+  </div>
+</div>
+
+<!-- ══════════════ 3. DRABINKA ══════════════ -->
+<h2>3. Drabinka: 3 i 10, i nic więcej do zapamiętania</h2>
+<p>Na egzaminie nie liczysz 10<sup>1,3</sup> w pamięci. Składasz liczbę decybeli z dwóch klocków — <b>10 dB</b> i <b>3 dB</b> — i mnożysz odpowiadające im mnożniki.</p>
+
+<table class="lad">
+  <tr><th>dB</th><th>mnożnik mocy</th><th>skąd</th></tr>
+  <tr><td class="k-db">0 dB</td><td class="k-pow">×1</td><td>brak zmiany</td></tr>
+  <tr><td class="k-db">3 dB</td><td class="k-pow">×2</td><td>klocek podstawowy</td></tr>
+  <tr><td class="k-db">6 dB</td><td class="k-pow">×4</td><td>3+3 → ×2·×2</td></tr>
+  <tr><td class="k-db">10 dB</td><td class="k-pow">×10</td><td>klocek podstawowy</td></tr>
+  <tr><td class="k-db">13 dB</td><td class="k-pow">×20</td><td>10+3 → ×10·<b>×2</b></td></tr>
+  <tr><td class="k-db">20 dB</td><td class="k-pow">×100</td><td>10+10 → ×10·×10</td></tr>
+  <tr><td class="k-db">−3 dB</td><td class="k-pow">×0,5</td><td>minus = dzielenie</td></tr>
+</table>
+
+<div class="panel">
+  <span class="step-tag">Model 4 — składarka: dodajesz dB, mnożnik montuje się sam</span>
+  <p>Klikaj klocki. Po lewej rośnie suma decybeli, po prawej montuje się iloczyn.</p>
+  <div class="choices" role="group" aria-label="Klocki decybelowe">
+    <button class="tile" data-db="10">+10 dB</button>
+    <button class="tile" data-db="3">+3 dB</button>
+    <button class="tile" data-db="-3">−3 dB</button>
+    <button class="tile" data-db="-10">−10 dB</button>
+    <button id="ladClear">wyczyść</button>
+  </div>
+  <div class="chips" id="chips" aria-live="polite"><span class="locknote">brak klocków — 0 dB, ×1</span></div>
+  <div class="two">
+    <div class="readout" id="ladDb"></div>
+    <div class="readout" id="ladMul"></div>
+  </div>
+  <div class="readout" id="ladW" aria-live="polite"></div>
+  <div id="ladTrap" class="verdict wrong" hidden></div>
+  <div id="lad13" class="verdict good" hidden></div>
+</div>
+
+<div class="aside">
+  <b>Dlaczego to nie jest oszustwo.</b> 3 dB to dokładnie ×1,995, nie ×2 — błąd 0,2 %. 10<sup>1,3</sup> = 19,95, a drabinka daje 20. Różnica jest mniejsza niż tolerancja czegokolwiek, co masz w szafce. Liczenie potęgi w pamięci nie kupuje ci tu dokładności, kupuje tylko ryzyko zacięcia się.
+</div>
+
+<!-- ══════════════ RETRIEVAL 2 ══════════════ -->
+<div class="panel">
+  <span class="step-tag">Przypomnij sobie — przypadek egzaminacyjny</span>
+  <p><b>Nadajnik oddaje moc 13 dBW. Ile to watów? Zapisz też rozkład, którym doszedłeś do wyniku — każdy klocek i jego mnożnik.</b></p>
+  <label class="sr" for="r2">Twoja odpowiedź</label>
+  <textarea id="r2" placeholder="Najpierw rozkład, potem wynik."></textarea>
+  <button class="revBtn" data-src="r2" data-tgt="r2a" disabled>Odsłoń wzorzec</button>
+  <div id="r2a" class="verdict" hidden>
+    <b>20 W.</b> Rozkład: 13 dBW = 10 dB + 3 dB. Odniesienie dBW to 1 W. 10 dB → ×10 → 10 W. Potem 3 dB → <b>×2</b> → 20 W.<br>
+    <span class="strike">10 W × 3 = 30 W</span> — to najczęstszy sposób, w jaki ten przykład się wykłada: liczba decybeli zostaje potraktowana jak mnożnik. <b>Decybel nigdy nie jest mnożnikiem. Jest wykładnikiem.</b> +3 dB znaczy ×2, a nie ×3. Sprawdzenie: 10·log(20/1) = 10·1,301 = 13,0 dBW. ✓
+  </div>
+</div>
+
+<!-- ══════════════ 4. FIDER ══════════════ -->
+<h2>4. Panel praktyczny: ile watów naprawdę dochodzi do anteny</h2>
+<p>Tłumienie fidera podaje się w dB na 100 m przy danej częstotliwości. Reszta to już tylko drabinka w dół.</p>
+
+<div class="panel">
+  <span class="step-tag">Model 5 — fider</span>
+  <div class="ctrl"><label for="fP">moc z nadajnika</label><input type="range" id="fP" min="5" max="750" step="5" value="100"><span class="val" id="fPv"></span></div>
+  <div class="ctrl"><label for="fL">tłumienie fidera</label><input type="range" id="fL" min="0" max="12" step="0.5" value="3"><span class="val" id="fLv"></span></div>
+  <div class="bars">
+    <div class="barrow"><span class="lbl">wchodzi do kabla</span><div class="bartrack"><div class="bar in" id="barIn"></div></div></div>
+    <div class="barrow"><span class="lbl">dociera do anteny</span><div class="bartrack"><div class="bar out" id="barOut"></div></div></div>
+    <div class="barrow"><span class="lbl">zamienia się w ciepło kabla</span><div class="bartrack"><div class="bar heat" id="barHeat"></div></div></div>
+  </div>
+  <div class="readout" id="fRead" aria-live="polite"></div>
+  <div class="choices" role="group" aria-label="Charakterystyczne tłumienia">
+    <button class="fp" data-l="3">−3 dB</button>
+    <button class="fp" data-l="6">−6 dB</button>
+    <button class="fp" data-l="10">−10 dB</button>
+  </div>
+  <p class="lead">−3 dB to połowa mocy oddana kablowi. Nie „trochę mniej” — połowa. Dlatego na UKF nikt nie prowadzi cienkiego koncentryka przez pół domu.</p>
+</div>
+
+<!-- ══════════════ RETRIEVAL 3 ══════════════ -->
+<div class="panel">
+  <span class="step-tag">Przypomnij sobie — bez suwaka</span>
+  <p><b>Do fidera o tłumieniu 6 dB wchodzi 100 W. Ile watów dociera do anteny i ile zostaje w kablu? Powiedz też, co by się stało z tą samą odpowiedzią, gdyby te 6 dB dotyczyło napięcia, a nie mocy.</b></p>
+  <label class="sr" for="r3">Twoja odpowiedź</label>
+  <textarea id="r3" placeholder="Dwie liczby i jedno zdanie o napięciu."></textarea>
+  <button class="revBtn" data-src="r3" data-tgt="r3a" disabled>Odsłoń wzorzec</button>
+  <div id="r3a" class="verdict" hidden>
+    6 dB = 3 + 3 → ×0,5 × ×0,5 = ×0,25. Do anteny dochodzi <b>25 W</b>, w kablu grzeje się <b>75 W</b>.<br>
+    Gdyby 6 dB dotyczyło <b>napięcia</b>: 6 = 20·log k → log k = 0,3 → k = <b>0,5</b>, więc napięcie spada dwukrotnie, nie czterokrotnie. Ta sama liczba decybeli, inny mnożnik, bo inna wielkość. Zgodność jest oczywiście zachowana: napięcie ×0,5 → moc ×0,25. ✓
+  </div>
+</div>
+
+<!-- ══════════════ KLAUZULA 6: PUSTA KARTKA ══════════════ -->
+<h2>5. Pusta kartka</h2>
+<div class="panel">
+  <span class="step-tag">Zamknij tę stronę (albo zakryj ekran ręką)</span>
+  <p>Odtwórz z niczego szkielet argumentu, w tej kolejności:</p>
+  <ol>
+    <li>Na czym decybel jest <i>zdefiniowany</i> — jakiej wielkości dotyczy stosunek?</li>
+    <li>Jaki fakt fizyczny wprowadza napięcie do tej definicji?</li>
+    <li>Jaka własność logarytmu zamienia dziesiątkę w dwudziestkę?</li>
+    <li>Dwa klocki drabinki i ich mnożniki.</li>
+    <li>Jedno zdanie, które unieważnia błąd „13 dB to 10 razy 3”.</li>
+  </ol>
+  <label class="sr" for="bp">Rekonstrukcja</label>
+  <textarea id="bp" style="min-height:150px" placeholder="Pięć punktów, z pamięci."></textarea>
+  <button class="revBtn" data-src="bp" data-tgt="bpa" disabled>Odsłoń szkielet do porównania</button>
+  <div id="bpa" class="verdict" hidden>
+    <ol>
+      <li>Na <b>stosunku mocy</b>: dB = 10·log(P₂/P₁). Napięcia w definicji nie ma.</li>
+      <li><b>P = U²/R</b> — moc zależy od kwadratu napięcia, więc stosunek napięć k daje stosunek mocy k².</li>
+      <li><b>log(k²) = 2·log k</b> — kwadrat wychodzi przed logarytm i mnoży dziesiątkę przez dwa. Dwudziestka to dziesiątka z wyciągniętym kwadratem, nie osobna reguła.</li>
+      <li><b>10 dB = ×10</b> i <b>3 dB = ×2</b> (ze znakiem minus: ×0,1 i ×0,5). Wszystko inne składasz z tych dwóch.</li>
+      <li><b>Decybel jest wykładnikiem, nie mnożnikiem.</b> 13 dBW = 10 dB + 3 dB = ×10 potem ×2 = 20 W. Nigdy ×13, nigdy 10×3.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="panel">
+  <p><b>Powiedz Engramowi swoje odpowiedzi z przypomnień, gdy następnym razem będziecie rozmawiać — staną się częścią twojego harmonogramu powtórek.</b></p>
+  <p class="lead">Trzy przypomnienia z tej strony: wyprowadzenie dwudziestki, przypadek 13 dBW, fider 6 dB.</p>
+</div>
+
+</div><!-- /bodywrap -->
+</main>
+
+<script>
+"use strict";
+const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const $ = id => document.getElementById(id);
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function fmt(x, d){ return x.toFixed(d).replace('.', ','); }
+function pw(x){ // formatowanie mocy
+  if (x >= 100) return fmt(x,0) + ' W';
+  if (x >= 10)  return fmt(x,1) + ' W';
+  if (x >= 1)   return fmt(x,2) + ' W';
+  return fmt(x,3) + ' W';
+}
+const L10 = Math.log10;
+
+/* ── motyw ── */
+const modes = ['auto','light','dark'];
+let mi = 0;
+$('themebtn').addEventListener('click', () => {
+  mi = (mi+1) % 3;
+  document.documentElement.setAttribute('data-theme', modes[mi]);
+  $('themebtn').textContent = 'motyw: ' + modes[mi];
+  drawScale(); drawLine();
+});
+
+/* ── uniwersalne odsłanianie po próbie (klauzula 3) ── */
+document.querySelectorAll('.revBtn').forEach(b => {
+  const src = $(b.dataset.src);
+  const upd = () => { b.disabled = src.value.trim().length < 8; };
+  src.addEventListener('input', upd); upd();
+  b.addEventListener('click', () => { $(b.dataset.tgt).hidden = false; b.disabled = true; b.textContent = 'odsłonięte'; });
+});
+
+/* ══════════ KLAUZULA 1 — BRAMKA ══════════ */
+let guessA = null, guessB = null;
+$('gateBtn').addEventListener('click', () => {
+  const a = parseFloat($('gA').value.replace(',','.')), b = parseFloat($('gB').value.replace(',','.'));
+  if (!isFinite(a) || !isFinite(b)) { $('gateHint').textContent = 'Wpisz obie liczby — nawet jeśli strzelasz na ślepo. To jest właśnie ta część, która działa.'; return; }
+  guessA = a; guessB = b;
+  $('bodywrap').hidden = false;
+  $('gateBtn').disabled = true;
+  $('gateHint').innerHTML = 'Zapisane: <b>A = ' + fmt(a,1) + ' dB</b>, <b>B = ' + fmt(b,1) + ' dB</b>. Rozstrzygnięcie czeka w części 2.';
+  buildGateVerdict();
+  requestAnimationFrame(() => { drawScale(); drawLine(); });
+  document.querySelector('h2').scrollIntoView({behavior: RM ? 'auto' : 'smooth', block:'start'});
+});
+function buildGateVerdict(){
+  const near = (x,t) => Math.abs(x-t) < 0.6;
+  let html = 'Na starcie napisałeś: napięcie ×10 → <b>' + fmt(guessA,1) + ' dB</b>, moc ×10 → <b>' + fmt(guessB,1) + ' dB</b>. ';
+  html += 'Prawidłowo: <b class="k-volt">20 dB</b> i <b class="k-pow">10 dB</b>. ';
+  if (near(guessA,20) && near(guessB,10)) html += '<span class="ok">Trafiłeś w obie.</span> Pytanie brzmi teraz inaczej: potrafisz powiedzieć, <i>dlaczego</i> — bez powoływania się na „taki jest wzór”?';
+  else if (near(guessB,10) && !near(guessA,20)) html += 'Moc miałeś. Napięcie poszło tą samą dziesiątką — a to dokładnie ten odruch, który zabija tu punkty: „dziesięciokrotnie” nie mówi <b>czego</b>.';
+  else html += 'Różnica między twoimi liczbami a tymi dwiema jest całą treścią części 2 — masz teraz gdzie ją zaczepić.';
+  $('gateVerdict').innerHTML = html;
+}
+
+/* ══════════ MODEL 1 — oś liniowa vs dB ══════════ */
+const PTS = [1, 5, 25, 100, 1500];
+let scaleT = 0;      // 0 = liniowa, 1 = dB
+let scaleTarget = 0, anim = null;
+const cvS = $('cvScale');
+function setup(cv){
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  const c = cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,w,h);
+  return {c,w,h};
+}
+const DBMAX = 10*L10(1500); // 31,76
+function drawScale(){
+  if (!cvS.clientWidth) return;
+  const {c,w,h} = setup(cvS);
+  const m = 34, y = h - 52, span = w - 2*m;
+  const ink = cssv('--ink'), dim = cssv('--ink-dim'), grid = cssv('--grid'), pow = cssv('--pow'), db = cssv('--db');
+  c.strokeStyle = grid; c.lineWidth = 1;
+  // podziałki: liniowe znikają, decybelowe się pojawiają
+  c.font = '11px ' + cssv('--mono');
+  c.textAlign = 'center';
+  c.globalAlpha = 1 - scaleT;
+  if (scaleT < 1){
+    [0,500,1000,1500].forEach(v => {
+      const x = m + (v/1500)*span;
+      c.beginPath(); c.moveTo(x,y); c.lineTo(x,y+7); c.stroke();
+      c.fillStyle = dim; c.fillText(v + ' W', x, y+22);
+    });
+  }
+  c.globalAlpha = scaleT;
+  if (scaleT > 0){
+    [0,10,20,30].forEach(v => {
+      const x = m + (v/DBMAX)*span;
+      c.beginPath(); c.moveTo(x,y); c.lineTo(x,y+7); c.stroke();
+      c.fillStyle = dim; c.fillText(v + ' dBW', x, y+22);
+    });
+  }
+  c.globalAlpha = 1;
+  // oś
+  c.strokeStyle = ink; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(m,y); c.lineTo(w-m+6,y); c.stroke();
+  // punkty
+  PTS.forEach((p,i) => {
+    const xl = m + (p/1500)*span;
+    const xd = m + ((10*L10(p))/DBMAX)*span;
+    const x = xl + (xd-xl)*scaleT;
+    c.fillStyle = pow;
+    c.beginPath(); c.arc(x, y, 6, 0, 6.2832); c.fill();
+    // etykieta na rzeczy, którą opisuje (kontiguacja); naprzemienne wysokości przy ścisku
+    const yy = y - 14 - (i%2)*20;
+    c.strokeStyle = pow; c.globalAlpha = .5; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x, y-6); c.lineTo(x, yy+4); c.stroke(); c.globalAlpha = 1;
+    c.fillStyle = ink; c.font = '600 12px ' + cssv('--mono');
+    c.fillText(p + ' W', x, yy);
+    if (scaleT > 0.55){
+      c.globalAlpha = (scaleT-0.55)/0.45;
+      c.fillStyle = db; c.font = '11px ' + cssv('--mono');
+      c.fillText(fmt(10*L10(p),1) + ' dBW', x, yy - 15);
+      c.globalAlpha = 1;
+    }
+    c.font = '11px ' + cssv('--mono');
+  });
+}
+function setScale(t){
+  scaleTarget = t;
+  $('btnLin').classList.toggle('sel', t===0);
+  $('btnDb').classList.toggle('sel', t===1);
+  $('scaleRead').innerHTML = t===0
+    ? '<b>Oś liniowa.</b> 1 W, 5 W i 25 W leżą praktycznie w tym samym punkcie — 1500 W zjada cały wykres. Różnica między 1 W a 25 W (dwudziestopięciokrotna!) jest niewidoczna.'
+    : '<b>Oś decybelowa.</b> Te same pięć mocy: 0 · 7,0 · 14,0 · 20,0 · 31,8 dBW. Odległości są teraz <b>stosunkami</b>: między 1 W a 25 W jest 14 dB, między 100 W a 1500 W — niecałe 12 dB. Oko widzi to, co ucho i tak słyszy: krotności, nie różnice.';
+  if (RM){ scaleT = t; drawScale(); return; }
+  const from = scaleT, t0 = performance.now(), dur = 600;
+  if (anim) cancelAnimationFrame(anim);
+  const step = now => {
+    const k = Math.min(1, (now-t0)/dur);
+    const e = k<.5 ? 2*k*k : 1-Math.pow(-2*k+2,2)/2;
+    scaleT = from + (t-from)*e;
+    drawScale();
+    if (k < 1) anim = requestAnimationFrame(step);
+  };
+  anim = requestAnimationFrame(step);
+}
+$('btnLin').addEventListener('click', () => setScale(0));
+$('btnDb').addEventListener('click', () => setScale(1));
+setScale(0);
+
+/* ══════════ MODEL 2 — predykcja, przebieg prowadzony, łańcuch ══════════ */
+document.querySelectorAll('.ptBtn').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.ptBtn').forEach(x => { x.disabled = true; x.classList.toggle('sel', x===b); });
+  const v = b.dataset.v;
+  const o = $('ptOut'); o.hidden = false;
+  if (v === '25'){
+    o.className = 'verdict good';
+    o.innerHTML = '<b>Tak: 25 W.</b> −6 dB to −3 dB dwa razy, czyli połowa z połowy. Zauważ, że <i>podwojenie liczby decybeli</i> dało <i>kwadrat mnożnika</i>, a nie podwojenie straty.';
+  } else if (v === '50'){
+    o.className = 'verdict wrong';
+    o.innerHTML = '<b>25 W.</b> 50 W byłoby przy −3 dB. Decybele dodają się liniowo, ale mnożniki się <i>mnożą</i>: −3 −3 to ×0,5 × ×0,5 = ×0,25.';
+  } else {
+    o.className = 'verdict wrong';
+    o.innerHTML = '<b>25 W.</b> 94 W to odpowiedź „odjąłem 6 watów” albo „6 % strat”. Decybel nigdy nie jest odejmowaniem od watów — jest wykładnikiem mnożnika.';
+  }
+  $('drive').hidden = false;
+}));
+
+const DQ = {
+  1: {ok:'50', txt:{
+    '50':['good','<b>50,1 W.</b> −3 dB = ×0,5. Połowa mocy została w kablu jako ciepło.'],
+    '97':['wrong','<b>50 W.</b> „97” to odjęcie 3 watów od 100 — a decybel nie jest jednostką mocy, tylko stosunku. −3 dB = ×0,5, zawsze, niezależnie od tego, czy wchodzi 100 W czy 3 W.'],
+    '33':['wrong','<b>50 W.</b> „33” to podzielenie przez 3 — liczba decybeli potraktowana jak mnożnik. To ten sam odruch, który z 13 dBW robi 30 W. −3 dB znaczy <b>×0,5</b>, nie „÷3”.']
+  }},
+  2: {ok:'500', txt:{
+    '500':['good','<b>501 W.</b> +10 dB = ×10. Dziesiątka w decybelach i dziesiątka w mnożniku spotykają się tu tylko dlatego, że log 10 = 1.'],
+    '150':['wrong','<b>501 W.</b> „150” to dodanie 100 W albo pomnożenie przez 3. +10 dB = ×10.'],
+    '60':['wrong','<b>501 W.</b> „60” to dodanie 10 W do 50 W. Decybele nie dodają watów — mnożą je.']
+  }},
+  3: {ok:'400', txt:{
+    '400':['good','<b>398 W.</b> −1 dB to ×0,794, więc gubisz ok. 20 % mocy. Jeden decybel to nie „nic”.'],
+    '499':['wrong','<b>398 W.</b> „499” to odjęty 1 wat. −1 dB = ×0,794 — z 500 W to strata ponad stu watów.'],
+    '250':['wrong','<b>398 W.</b> Połowa byłaby przy −3 dB. −1 dB to ×0,794.']
+  }}
+};
+let dqDone = 0;
+document.querySelectorAll('.dq').forEach(b => b.addEventListener('click', () => {
+  const q = b.dataset.q, v = b.dataset.v, spec = DQ[q];
+  document.querySelectorAll('.dq[data-q="'+q+'"]').forEach(x => { x.disabled = true; x.classList.toggle('sel', x===b); });
+  const [cls, txt] = spec.txt[v];
+  const a = $('a'+q); a.hidden = false; a.className = 'verdict ' + cls; a.innerHTML = txt;
+  dqDone++;
+  if (q === '1'){ $('driveState').innerHTML = 'Po kablu 1: <b class="k-pow">50,1 W</b> = <b class="k-db">17,0 dBW</b>. &nbsp;(20 − 3 = 17)'; $('q2').hidden = false; }
+  if (q === '2'){ $('driveState').innerHTML = 'Po wzmacniaczu: <b class="k-pow">501 W</b> = <b class="k-db">27,0 dBW</b>. &nbsp;(17 + 10 = 27)'; $('q3').hidden = false; }
+  if (q === '3'){
+    $('driveState').innerHTML = 'Na antenie: <b class="k-pow">398 W</b> = <b class="k-db">26,0 dBW</b>. &nbsp;(27 − 1 = 26)<br>' +
+      'Cały tor jednym rachunkiem: <b class="k-db">−3 + 10 − 1 = +6 dB</b> → <b class="k-pow">×3,98</b> → 100 W × 3,98 = 398 W. Trzy dodawania zamiast trzech mnożeń.';
+    $('chainFree').hidden = false;
+    updChain();
+  }
+}));
+
+const chainEls = ['sP','sC1','sA','sC2'];
+function updChain(){
+  const P = +$('sP').value, c1 = +$('sC1').value, A = +$('sA').value, c2 = +$('sC2').value;
+  $('vP').textContent = P + ' W';
+  $('vC1').textContent = '−' + fmt(c1,1) + ' dB';
+  $('vA').textContent = '+' + fmt(A,1) + ' dB';
+  $('vC2').textContent = '−' + fmt(c2,1) + ' dB';
+  const dB0 = 10*L10(P);
+  const steps = [
+    ['TRX', P, dB0, null, null],
+    ['kabel 1', P*Math.pow(10,-c1/10), dB0-c1, Math.pow(10,-c1/10), -c1],
+    ['wzmacniacz', P*Math.pow(10,(-c1+A)/10), dB0-c1+A, Math.pow(10,A/10), +A],
+    ['kabel 2', P*Math.pow(10,(-c1+A-c2)/10), dB0-c1+A-c2, Math.pow(10,-c2/10), -c2]
+  ];
+  let html = '';
+  steps.forEach(([name, w, d, mul, add]) => {
+    const mtxt = mul === null ? '<span class="op">start</span>' : '<span class="op">× ' + fmt(mul,3) + ' →</span> ';
+    const atxt = add === null ? '<span class="op">start</span>' : '<span class="op">' + (add>=0?'+':'−') + ' ' + fmt(Math.abs(add),1) + ' →</span> ';
+    html += '<tr><td class="stage">' + name + '</td><td class="w">' + mtxt + pw(w) + '</td><td class="d">' + atxt + fmt(d,1) + ' dBW</td></tr>';
+  });
+  const totalDb = -c1 + A - c2, totalMul = Math.pow(10, totalDb/10);
+  html += '<tr class="sum"><td class="stage">cały tor</td><td class="w">× ' + fmt(totalMul,3) + '</td><td class="d">' + (totalDb>=0?'+':'−') + fmt(Math.abs(totalDb),1) + ' dB</td></tr>';
+  $('chainBody').innerHTML = html;
+  $('chainSum').innerHTML = 'Prawa kolumna to zwykłe <b>dodawanie</b>: ' + fmt(dB0,1) + ' − ' + fmt(c1,1) + ' + ' + fmt(A,1) + ' − ' + fmt(c2,1) + ' = <b class="k-db">' + fmt(dB0+totalDb,1) + ' dBW</b>.<br>' +
+    'Lewa to <b>mnożenie</b>: ' + P + ' × ' + fmt(Math.pow(10,-c1/10),3) + ' × ' + fmt(Math.pow(10,A/10),3) + ' × ' + fmt(Math.pow(10,-c2/10),3) + ' = <b class="k-pow">' + pw(steps[3][1]) + '</b>.<br>' +
+    'To ta sama informacja. Prawa strona mieści się w głowie.';
+}
+chainEls.forEach(id => $(id).addEventListener('input', updChain));
+
+/* ══════════ RDZEŃ — krok wyprowadzenia ══════════ */
+document.querySelectorAll('.dv').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.dv').forEach(x => { x.disabled = true; x.classList.toggle('sel', x===b); });
+  const v = b.dataset.v, o = $('dvOut'); o.hidden = false;
+  if (v === 'k2'){
+    o.className = 'verdict good';
+    o.innerHTML = '<b>k² razy.</b> P = U²/R — podwojenie napięcia daje czterokrotną moc, bo kwadrat. To jedyna fizyka w całym wyprowadzeniu.';
+  } else if (v === 'k'){
+    o.className = 'verdict wrong';
+    o.innerHTML = '<b>k² razy.</b> Gdyby moc rosła tak samo jak napięcie, nie byłoby o czym rozmawiać — i nie byłoby dwudziestki. Kwadrat we wzorze P = U²/R jest źródłem całej różnicy.';
+  } else {
+    o.className = 'verdict wrong';
+    o.innerHTML = '<b>k² razy, nie 2k.</b> Kwadrat, nie podwojenie: przy k = 10 moc rośnie 100 razy, nie 20.';
+  }
+  $('deriv2').hidden = false;
+  $('ratioWidget').hidden = false;
+  $('tenTen').hidden = false;
+  updK();
+  requestAnimationFrame(drawLine);
+}));
+
+/* ══════════ MODEL 3 — dwie drogi ══════════ */
+let kVal = 10;
+function setK(k){
+  kVal = k;
+  $('sK').value = L10(k).toFixed(2);
+  updK();
+}
+function updK(){
+  const k = Math.pow(10, +$('sK').value);
+  kVal = k;
+  const kTxt = k >= 10 ? fmt(k,1) : (k >= 1 ? fmt(k,2) : fmt(k,3));
+  $('vK').textContent = '×' + kTxt;
+  const pr = k*k;
+  const dbP = 10*L10(pr), dbU = 20*L10(k);
+  $('pathP').innerHTML = '<b class="k-pow">DROGA PRZEZ MOC</b><br>' +
+    'U₂/U₁ = ' + kTxt + '<br>' +
+    'P₂/P₁ = ' + kTxt + '² = <b>' + (pr>=10?fmt(pr,1):fmt(pr,3)) + '</b><br>' +
+    'log(k²) = <b>' + fmt(L10(pr),4) + '</b><br>' +
+    'dB = 10 · ' + fmt(L10(pr),4) + ' = <b class="k-db">' + fmt(dbP,2) + ' dB</b>';
+  $('pathU').innerHTML = '<b class="k-volt">DROGA PRZEZ NAPIĘCIE</b><br>' +
+    'U₂/U₁ = ' + kTxt + '<br>' +
+    'log(k) = ' + fmt(L10(k),4) + '<br>' +
+    '2 · log(k) = <b>' + fmt(2*L10(k),4) + '</b> &nbsp;← ta sama liczba co obok<br>' +
+    'dB = 20 · ' + fmt(L10(k),4) + ' = <b class="k-db">' + fmt(dbU,2) + ' dB</b>';
+  $('lineRead').innerHTML = 'Obie drogi lądują na <b class="k-db">' + fmt(dbU,2) + ' dB</b> — i będą lądować na tej samej liczbie dla każdego k, bo <b>log(k²) = 2·log(k)</b> to tożsamość, nie zbieg okoliczności. ' +
+    (Math.abs(k-10) < 0.15 ? '<br><b>Jesteś w punkcie k = 10: napięcie ×10 → 20 dB.</b> Ale moc urosła wtedy ×100, a 10·log(100) też daje 20. Jedna dwudziestka, dwa opisy.' :
+     Math.abs(k-2) < 0.03 ? '<br><b>k = 2: napięcie podwojone → 6 dB</b>, bo moc poczwórniona (6 dB = ×4 mocy). Podwojenie <i>mocy</i> to tylko 3 dB.' :
+     Math.abs(k-1.4142) < 0.02 ? '<br><b>k = √2: napięcie ×1,41 → 3 dB</b>, bo moc dokładnie podwojona. Stąd „√2” w tabelkach — to napięciowy odpowiednik 3 dB.' : '');
+  drawLine();
+}
+$('sK').addEventListener('input', updK);
+document.querySelectorAll('.kp').forEach(b => b.addEventListener('click', () => setK(+b.dataset.k)));
+
+const cvL = $('cvLine');
+function drawLine(){
+  if (!cvL.clientWidth || $('ratioWidget').hidden) return;
+  const {c,w,h} = setup(cvL);
+  const m = 30, y = h/2 + 6, span = w - 2*m;
+  const ink = cssv('--ink'), dim = cssv('--ink-dim'), grid = cssv('--grid'),
+        pow = cssv('--pow'), volt = cssv('--volt'), db = cssv('--db');
+  const dbv = 20*L10(kVal);
+  const x = m + ((dbv + 40)/80)*span;
+  c.strokeStyle = grid; c.lineWidth = 1;
+  c.font = '11px ' + cssv('--mono'); c.textAlign = 'center'; c.fillStyle = dim;
+  for (let v = -40; v <= 40; v += 10){
+    const xx = m + ((v+40)/80)*span;
+    c.beginPath(); c.moveTo(xx, y-5); c.lineTo(xx, y+5); c.stroke();
+    c.fillText((v>0?'+':'') + v, xx, y+19);
+  }
+  c.strokeStyle = ink; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(m,y); c.lineTo(w-m,y); c.stroke();
+  c.fillStyle = dim; c.textAlign = 'left'; c.fillText('dB', w-m+4, y+4);
+  // znacznik
+  c.fillStyle = db;
+  c.beginPath(); c.arc(x, y, 7, 0, 6.2832); c.fill();
+  c.font = '600 13px ' + cssv('--mono'); c.textAlign = 'center'; c.fillStyle = ink;
+  c.fillText(fmt(dbv,2) + ' dB', x, y - 42);
+  // dwie strzałki schodzące do tego samego punktu
+  c.lineWidth = 1.5;
+  c.strokeStyle = pow;
+  c.beginPath(); c.moveTo(x-46, y-30); c.lineTo(x-6, y-9); c.stroke();
+  c.strokeStyle = volt;
+  c.beginPath(); c.moveTo(x+46, y-30); c.lineTo(x+6, y-9); c.stroke();
+  c.font = '600 11px ' + cssv('--mono');
+  c.fillStyle = pow; c.textAlign = 'right'; c.fillText('10·log(k²)', x-40, y-32);
+  c.fillStyle = volt; c.textAlign = 'left'; c.fillText('20·log(k)', x+40, y-32);
+}
+
+/* ══════════ MODEL 4 — drabinka ══════════ */
+let tiles = [];
+function updLad(){
+  const box = $('chips');
+  if (!tiles.length){
+    box.innerHTML = '<span class="locknote">brak klocków — 0 dB, ×1</span>';
+  } else {
+    box.innerHTML = tiles.map(t => '<span class="chip">' + (t>0?'+':'−') + Math.abs(t) + ' dB</span>').join('<span class="op">+</span>');
+  }
+  const sum = tiles.reduce((a,b) => a+b, 0);
+  const mul = tiles.reduce((a,b) => a * (b===10?10 : b===3?2 : b===-3?0.5 : 0.1), 1);
+  const exact = Math.pow(10, sum/10);
+  $('ladDb').innerHTML = '<b class="k-db">SUMA DECYBELI</b><br>' +
+    (tiles.length ? tiles.map(t => (t>0?'+':'−') + Math.abs(t)).join(' ') + ' = ' : '') +
+    '<b class="big">' + (sum>0?'+':'') + sum + ' dB</b>';
+  $('ladMul').innerHTML = '<b class="k-pow">ILOCZYN MNOŻNIKÓW</b><br>' +
+    (tiles.length ? tiles.map(t => '×' + (t===10?'10' : t===3?'2' : t===-3?'0,5' : '0,1')).join(' ') + ' = ' : '') +
+    '<b class="big">×' + (mul>=1 ? fmt(mul,mul>=10?0:1) : fmt(mul,3)) + '</b>';
+  $('ladW').innerHTML = 'Jako moc odniesiona do 1 W: <b>' + (sum>0?'+':'') + sum + ' dBW</b> → z drabinki <b class="k-pow">' + pw(mul).replace(/,0+ W$/, ' W') +
+    '</b> · dokładnie 10<sup>' + fmt(sum/10,2) + '</sup> = <b>' + fmt(exact, exact>=100?0:2) + ' W</b>' +
+    (Math.abs(mul-exact)/Math.max(exact,1e-9) < 0.02 ? ' &nbsp;<span class="ok">— drabinka trafia w granicach 2 %</span>' : '');
+  const has3 = tiles.some(t => Math.abs(t) === 3);
+  const trap = $('ladTrap');
+  trap.hidden = !has3;
+  if (has3) trap.innerHTML = 'Klocek 3 dB w środku. Sprawdź, czego <b>nie</b> zrobiłeś: nie pomnożyłeś przez 3. ' +
+    '<span class="strike">×3</span> → poprawnie <b class="ok">×2</b>. Liczba decybeli nigdy nie jest mnożnikiem — jest wykładnikiem, który dopiero <i>wskazuje</i> mnożnik.';
+  const l13 = $('lad13');
+  l13.hidden = !(sum === 13);
+  if (sum === 13) l13.innerHTML = '<b>To jest przypadek egzaminacyjny: 13 dBW.</b> 10 dB → ×10 → 10 W. Potem 3 dB → ×2 → <b>20 W</b>. ' +
+    'Nie 30 W (to byłoby traktowanie „3” jak mnożnika), nie 13 W, nie 19,95 W liczone w pamięci przez 10<sup>1,3</sup> — choć akurat 19,95 W to prawda, a 20 W to ona zaokrąglona.';
+}
+document.querySelectorAll('.tile').forEach(b => b.addEventListener('click', () => { tiles.push(+b.dataset.db); updLad(); }));
+$('ladClear').addEventListener('click', () => { tiles = []; updLad(); });
+updLad();
+
+/* ══════════ MODEL 5 — fider ══════════ */
+function updF(){
+  const P = +$('fP').value, L = +$('fL').value;
+  const out = P * Math.pow(10, -L/10), heat = P - out;
+  $('fPv').textContent = P + ' W';
+  $('fLv').textContent = '−' + fmt(L,1) + ' dB';
+  const sc = x => Math.max(1.5, (x/P)*100) + '%';
+  $('barIn').style.width = '100%'; $('barIn').textContent = pw(P);
+  $('barOut').style.width = sc(out); $('barOut').textContent = pw(out);
+  $('barHeat').style.width = sc(heat); $('barHeat').textContent = pw(heat);
+  const pct = 100*out/P;
+  $('fRead').innerHTML = 'Tłumienie <b class="k-db">' + fmt(L,1) + ' dB</b> → mnożnik <b>×' + fmt(Math.pow(10,-L/10),3) + '</b>. ' +
+    'Do anteny dociera <b class="k-pow">' + pw(out) + '</b> (' + fmt(pct,1) + ' % mocy), w kablu grzeje się <b class="bad">' + pw(heat) + '</b>.' +
+    (Math.abs(L-3)<.01 ? '<br><b>3 dB: dokładnie połowa.</b> Połowa rachunku za prąd idzie w izolację kabla.' :
+     Math.abs(L-6)<.01 ? '<br><b>6 dB = 3 + 3: ćwierć mocy dociera.</b> Trzy czwarte grzeje kabel.' :
+     Math.abs(L-10)<.01 ? '<br><b>10 dB: zostaje jedna dziesiąta.</b> Ze 100 W robi się 10 W — z legalnego QRO robi się QRP.' : '');
+}
+['fP','fL'].forEach(id => $(id).addEventListener('input', updF));
+document.querySelectorAll('.fp').forEach(b => b.addEventListener('click', () => { $('fL').value = b.dataset.l; updF(); }));
+updF();
+
+/* ── responsywność ── */
+let rt;
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { drawScale(); drawLine(); }, 120); });
+</script>
+</body>
+</html>

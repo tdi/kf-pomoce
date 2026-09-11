@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tor sygnału — jak sygnał zmienia się po drodze</title>
+<style>
+:root{--bg:#f6f4ef;--surface:#fffdf8;--surface2:#efeae0;--ink:#20211f;--ink2:#55584f;--ink3:#8a8d82;
+--line:#d6d0c3;--mcz:#1d6f5c;--wcz:#b0442a;--pcz:#7a5a1e;--inj:#4a4a8f;--acc:#b0442a;--grid:#e6e1d6;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14150f;--surface:#1c1e17;--surface2:#262a20;
+--ink:#ece9df;--ink2:#a8ab9d;--ink3:#787b6f;--line:#3a3e32;--mcz:#5ec9a8;--wcz:#ef8a63;--pcz:#d9b45c;
+--inj:#9a9ae0;--acc:#ef8a63;--grid:#282c22;}}
+:root[data-theme="dark"]{--bg:#14150f;--surface:#1c1e17;--surface2:#262a20;--ink:#ece9df;--ink2:#a8ab9d;
+--ink3:#787b6f;--line:#3a3e32;--mcz:#5ec9a8;--wcz:#ef8a63;--pcz:#d9b45c;--inj:#9a9ae0;--acc:#ef8a63;--grid:#282c22;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+line-height:1.5;font-size:15px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 18px 60px}
+h1{font-size:1.4rem;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--ink2);font-size:.9rem;margin:0 0 16px;max-width:74ch}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tabs button{background:var(--surface);border:1px solid var(--line);color:var(--ink2);padding:7px 13px;
+border-radius:7px;cursor:pointer;font:inherit;font-size:.84rem}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tabs button:focus-visible,.blk:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.chainbox{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:15px 14px 12px;overflow-x:auto}
+.chainttl{font-size:.82rem;color:var(--ink2);margin:0 0 14px;max-width:96ch}.chainttl b{color:var(--ink)}
+.grid{display:grid;gap:0 5px;justify-content:start;align-items:stretch;min-width:min-content}
+.blk{background:var(--surface2);border:2px solid var(--line);border-radius:6px 6px 0 0;border-bottom:none;
+min-width:104px;min-height:50px;padding:5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;
+justify-content:center;gap:1px;text-align:center;font:inherit;color:var(--ink)}
+.blk .n{font-weight:700;font-size:.95rem}.blk .nm{font-size:.63rem;line-height:1.15;color:var(--ink2)}
+.mini{border:2px solid var(--line);border-top:none;border-radius:0 0 6px 6px;background:var(--bg);cursor:pointer;
+height:52px;position:relative;overflow:hidden}
+.mini canvas{width:100%;height:100%;display:block}
+.mini .mlab{position:absolute;left:4px;top:2px;font-size:.56rem;color:var(--ink3);letter-spacing:.02em}
+.sel .blk,.sel .mini{border-color:var(--acc)}
+.sel .blk{background:var(--bg);box-shadow:0 -2px 0 0 var(--acc) inset}
+.k-mcz .blk{border-left-width:6px;border-left-color:var(--mcz)}
+.k-wcz .blk{border-left-width:6px;border-left-color:var(--wcz)}
+.k-pcz .blk{border-left-width:6px;border-left-color:var(--pcz)}
+.k-inj .blk{border-left-width:6px;border-left-color:var(--inj)}
+.unit{display:flex;flex-direction:column}
+.arr{display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:1.05rem;width:20px}
+.vbar{display:flex;justify-content:center;align-items:center;color:var(--inj);font-size:1rem;height:20px}
+.term{display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.68rem;
+color:var(--ink2);text-align:center;width:56px;gap:2px}.term .ic{font-size:1.4rem;line-height:1}
+.exam .blk .nm{visibility:hidden}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.73rem;color:var(--ink2);margin:12px 0 0}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.lg-mcz::before{background:var(--mcz)}.lg-wcz::before{background:var(--wcz)}
+.lg-pcz::before{background:var(--pcz)}.lg-inj::before{background:var(--inj)}
+.tools{display:flex;gap:8px;align-items:center;margin:12px 0 0;flex-wrap:wrap}
+.tools button{background:var(--surface2);border:1px solid var(--line);color:var(--ink2);padding:5px 11px;
+border-radius:6px;cursor:pointer;font:inherit;font-size:.78rem}
+.tools button[aria-pressed="true"]{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.pill{font-size:.66rem;color:var(--ink3);border:1px solid var(--line);border-radius:99px;padding:1px 8px}
+.ba{display:grid;grid-template-columns:1fr 34px 1fr;gap:0;margin-top:16px;align-items:stretch}
+@media(max-width:760px){.ba{grid-template-columns:1fr;gap:8px}.ba .mid{transform:rotate(90deg);height:30px}}
+.ba .card{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:13px}
+.ba .mid{display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--acc)}
+.card h3{margin:0 0 3px;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.card .fq{font-size:.74rem;color:var(--ink2);margin:0 0 7px}
+.big{width:100%;height:150px;display:block;border-radius:6px;background:var(--bg);border:1px solid var(--line)}
+.seeit{font-size:.82rem;margin:8px 0 0;color:var(--ink2)}
+.seeit b{color:var(--ink)}
+.did{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:14px}
+.did .name{font-size:1.05rem;font-weight:650;margin:0 0 3px}
+.badge{display:inline-block;font-size:.65rem;padding:2px 8px;border-radius:99px;font-weight:650;
+letter-spacing:.04em;vertical-align:2px;margin-left:7px;color:var(--bg)}
+.b-mcz{background:var(--mcz)}.b-wcz{background:var(--wcz)}.b-pcz{background:var(--pcz)}.b-inj{background:var(--inj)}
+.change{margin:9px 0 0;padding:9px 12px;background:color-mix(in srgb,var(--acc) 11%,var(--surface2));
+border-left:3px solid var(--acc);border-radius:0 6px 6px 0;font-size:.88rem}
+.role{margin:11px 0 0;font-size:.9rem}
+.key{margin:10px 0 0;padding:9px 11px;background:var(--surface2);border-radius:6px;font-size:.84rem;color:var(--ink2)}
+.key b{color:var(--ink)}
+.quiz{margin-top:13px;display:none}.quiz.on{display:block}
+.quiz .q{font-size:.9rem;margin:0 0 8px}
+.quiz .opts{display:flex;flex-direction:column;gap:5px;max-width:640px}
+.quiz .opts button{text-align:left;background:var(--surface2);border:1px solid var(--line);color:var(--ink);
+padding:7px 11px;border-radius:6px;cursor:pointer;font:inherit;font-size:.84rem}
+.quiz .opts button.ok{border-color:var(--mcz);background:color-mix(in srgb,var(--mcz) 20%,var(--surface))}
+.quiz .opts button.no{border-color:var(--wcz);background:color-mix(in srgb,var(--wcz) 20%,var(--surface))}
+.score{font-size:.78rem;color:var(--ink3);margin-top:8px}
+.rules{margin-top:20px;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:15px}
+.rules ol{margin:0;padding-left:20px}.rules li{margin:0 0 9px;font-size:.89rem}.rules b{color:var(--acc)}
+</style></head><body><div class="wrap">
+<h1>Tor sygnału — jak sygnał zmienia się po drodze</h1>
+<p class="sub">Pod każdym blokiem widzisz <b>sygnał na jego wyjściu</b> — wszystkie naraz, więc wodzisz wzrokiem od lewej do prawej i widzisz, co się z nim kolejno dzieje. Kliknij blok, żeby zobaczyć duże <b>wejście obok wyjścia</b>. Wysokość przebiegu odpowiada rzeczywistej mocy: od mikrowoltów przy antenie do pełnej mocy za PA.</p>
+<div class="tabs" id="tabs"></div>
+<div class="chainbox"><p class="chainttl" id="chainttl"></p><div class="grid" id="grid"></div>
+<div class="legend"><span class="lg-mcz">m.cz. — słyszalne</span><span class="lg-wcz">w.cz. — radiowe</span>
+<span class="lg-pcz">p.cz. — pośrednia</span><span class="lg-inj">wstrzykiwacz (od dołu)</span></div>
+<div class="tools"><button id="examBtn" aria-pressed="false">Tryb egzaminu — ukryj nazwy</button>
+<button id="freezeBtn" aria-pressed="false">Zatrzymaj</button>
+<button id="slowBtn" aria-pressed="false">Zwolnij 5×</button>
+<span class="pill" id="hint">klikaj bloki</span></div>
+<div class="quiz" id="quiz"></div></div>
+
+<div class="ba">
+ <div class="card"><h3>Wejście — co wchodzi do bloku</h3><p class="fq" id="fin"></p>
+   <canvas class="big" id="cin"></canvas><p class="seeit" id="sin"></p></div>
+ <div class="mid">⟶</div>
+ <div class="card"><h3>Wyjście — co blok z tego zrobił</h3><p class="fq" id="fout"></p>
+   <canvas class="big" id="cout"></canvas><p class="seeit" id="sout"></p></div>
+</div>
+
+<div class="did" id="info"></div>
+
+<div class="rules"><h3>Pięć reguł, które rozwiązują prawie każde pytanie o schemat</h3><ol>
+<li><b>m.cz. istnieje w radiu tylko w dwóch miejscach:</b> przy mikrofonie i przy głośniku. Wszystko pomiędzy jest w.cz. Dlatego <b>„wzmacniacz akustyczny" to zawsze blok dotykający głośnika</b>, a „detektor" to zawsze blok tuż przed nim.</li>
+<li><b>Blok zasilany strzałką od dołu to wstrzykiwacz</b> — heterodyna, VFO albo BFO. Nigdy nie jest częścią toru. Pod mieszaczem stoi heterodyna, pod detektorem BFO.</li>
+<li><b>Mieszacz przesuwa, wzmacniacz skaluje, filtr wycina.</b> Żaden z nich nie zmienia kształtu obwiedni — zobacz to na miniaturkach: koperta jest ta sama od wzbudnicy do anteny.</li>
+<li><b>Wzbudnica to miejsce narodzin SSB.</b> Tam mowa staje się sygnałem radiowym. Po wzbudnicy sygnał już tylko wędruje i rośnie.</li>
+<li><b>Filtr wyjściowy jest zawsze ostatni</b>, bo to on wycina harmoniczne wyprodukowane przez PA.</li>
+</ol></div></div>
+
+<script>
+const TAU=Math.PI*2;
+const S={
+ audio:(x,t)=>0.45*Math.sin(TAU*2.5*x+t*1.6)+0.28*Math.sin(TAU*6*x+t*2.4)+0.16*Math.sin(TAU*10.5*x+t*1.1),
+ rf:(x,t,cf)=>Math.sin(TAU*cf*x+t*7),
+ ssb:(x,t,cf)=>0.5*(Math.sin(TAU*(cf-2)*x+t*7)+Math.sin(TAU*(cf+2)*x+t*7.35)),
+ dsb:(x,t,cf)=>Math.sin(TAU*2.5*x+t*1.6)*Math.sin(TAU*cf*x+t*7),
+ am:(x,t,cf)=>((1+0.62*Math.sin(TAU*2.5*x+t*1.6))/1.62)*Math.sin(TAU*cf*x+t*7),
+ fm:(x,t,cf)=>Math.sin(TAU*cf*x+t*7+2.6*Math.sin(TAU*2.2*x+t*1.6)),
+ cw:(x,t,cf)=>(Math.sin(TAU*1.2*x+t*0.9)>0?1:0)*Math.sin(TAU*cf*x+t*7),
+ noise:(x,t)=>0.75*(Math.sin(x*911+t*13)+Math.sin(x*373+t*7)+Math.sin(x*157+t*23))/3,
+ mix2:(x,t,cf)=>0.5*(S.ssb(x,t,cf)+S.ssb(x,t,cf*2.1)),
+ none:()=>0};
+const SEE={
+ audio:'Wolny, nieregularny kształt — <b>to jest po prostu dźwięk</b>. Gdyby podłączyć tu głośnik, usłyszałbyś mowę.',
+ rf:'Równa, niezmienna sinusoida. <b>Nie niesie żadnej informacji</b> — sama częstotliwość i tyle.',
+ ssb:'Szybka nośna, a jej <b>obwiednia to mowa</b>. Kropkowana linia pokazuje kopertę — to ona jest sygnałem.',
+ dsb:'Obwiednia <b>dotyka zera i faza się odwraca</b> (zaznaczone). Tak wygląda wykasowana nośna — w AM to niemożliwe.',
+ am:'Obwiednia niesie dźwięk, ale <b>nigdy nie schodzi do zera</b> — nośna trzyma dno (kreskowana linia).',
+ fm:'<b>Amplituda jest stała</b> (dwie kreskowane linie). Zmienia się tylko zagęszczenie — tam siedzi informacja.',
+ cw:'Nośna <b>włączana i wyłączana</b> — kreski i kropki. Między nimi cisza.',
+ noise:'Chaos bez kształtu. <b>Tak wygląda szum</b>, gdy nie ma stacji.',
+ mix2:'<b>Dwa sygnały naraz</b>: suma i różnica. Mieszacz zrobił obie — dopiero filtr wybierze jedną.',
+ none:'—'};
+
+const CH=[
+{id:'tx',t:'Nadajnik SSB (wzbudnica 9 MHz)',
+ note:'Pytania <b>106, 107, 206–210</b>. Jeden VFO 5–5,5 MHz daje dwa pasma: <b>9 + 5…5,5 = 14…14,5 MHz</b> (20 m) albo <b>9 − 5,5…5 = 3,5…4 MHz</b> (80 m). Po to jest przełączany filtr pasmowy.',
+ src:{ic:'🎤',lab:'mikrofon',sig:'audio',amp:.16,f:'mowa, milivolty'},dst:{ic:'⌇',lab:'antena'},
+ blocks:[
+ {n:1,nm:'wzbudnica SSB 9 MHz',k:'wcz',f:'9 MHz',sig:'ssb',cf:34,amp:.18,
+  did:'Zamieniła mowę w sygnał radiowy. Wolny kształt dźwięku stał się <b>obwiednią szybkiej nośnej</b>. Kształt koperty jest ten sam co na wejściu — mowa się nie zmieniła, tylko dosiadła nośnej.',
+  role:'Serce nadajnika i jedyne miejsce, gdzie mowa zamienia się w sygnał radiowy. W środku: wzmacniacz m.cz. → <b>modulator zrównoważony</b> (miesza mowę z nośną 9 MHz i kasuje samą nośną — zostaje DSB) → <b>filtr kwarcowy</b>, który wycina jedną wstęgę.',
+  i:'mowa m.cz. 300–3000 Hz',o:'SSB na stałych 9 MHz, miliwaty',
+  key:'„Wzbudnica" = kompletny mały nadajnik małej mocy. Wszystko za nią to już tylko przesuwanie i wzmacnianie. <b>Osobna zakładka pokazuje jej wnętrze.</b>'},
+ {n:2,nm:'mieszacz',k:'wcz',f:'3,5 i 14 MHz',sig:'mix2',cf:14,amp:.14,
+  did:'<b>Rozrzedził nośną</b> i zrobił <b>dwa sygnały naraz</b>: sumę 14 MHz i różnicę 3,5 MHz. Popatrz — koperta ta sama, ale przebieg jest podwójny i rzadszy niż na wejściu.',
+  role:'Mnoży SSB 9 MHz przez sinusoidę z VFO. Na wyjściu pojawiają się <b>obie</b> częstotliwości: suma i różnica. Mieszacz nie wybiera — on tylko produkuje.',
+  i:'SSB 9 MHz + sinusoida 5–5,5 MHz z bloku 7',o:'SSB na 3,5 MHz ORAZ na 14 MHz jednocześnie',
+  key:'Zmieniła się częstotliwość, nie kształt. To jest różnica między mieszaczem a modulatorem: <b>modulator tworzy obwiednię, mieszacz ją tylko przewozi.</b>'},
+ {n:3,nm:'filtr pasmowy 3,5–14 MHz',k:'wcz',f:'3,5 MHz',sig:'ssb',cf:14,amp:.12,
+  did:'<b>Wywalił jedną z dwóch produkcji mieszacza.</b> Podwójny przebieg z wejścia zrobił się znów pojedynczy i czysty. To ten blok zdecydował, że nadajesz na 80 m, a nie na 20 m.',
+  role:'Przełącznikiem wybierasz, którą produkcję mieszacza przepuścić — 80 m albo 20 m. Drugą wywala.',
+  i:'SSB na 3,5 i 14 MHz razem',o:'SSB tylko na wybranym paśmie',
+  key:'Na rysunku w puli ma tu widelec z dwiema strzałkami — to graficzny zapis <b>przełącznika pasm</b>.'},
+ {n:4,nm:'wzmacniacz sterujący',k:'wcz',f:'3,5 MHz',sig:'ssb',cf:14,amp:.42,
+  did:'<b>Tylko urósł.</b> Ten sam kształt, ta sama częstotliwość, ok. 3× wyższy. Tak wygląda praca wzmacniacza: skala, nic więcej.',
+  role:'Podnosi poziom z miliwatów do kilku watów, żeby było czym wysterować PA. Musi być <b>liniowy (A lub AB)</b>, bo obwiednia SSB niesie informację.',
+  i:'SSB, miliwaty',o:'SSB, kilka watów — ten sam kształt',
+  key:'Po angielsku „driver". Istnieje tylko dlatego, że PA potrzebuje na wejściu więcej, niż daje mieszacz.'},
+ {n:5,nm:'wzmacniacz mocy (PA)',k:'wcz',f:'3,5 MHz',sig:'ssb',cf:14,amp:.96,
+  did:'<b>Urósł do pełnej skali</b> — to jest cała moc nadajnika. Kształt <em>musi</em> zostać ten sam: gdyby PA obciął szczyty, obwiednia by się zdeformowała i sygnał rozjechałby się po sąsiednich kanałach.',
+  role:'Ostatnie i największe wzmocnienie — do 100 W, 500 W albo ile masz w pozwoleniu. <b>Klasa AB</b>, nigdy C: klasa C obcina obwiednię i robi splatter.',
+  i:'SSB, kilka watów',o:'SSB, pełna moc + niechciane harmoniczne',
+  key:'PA zawsze jest w jakimś stopniu nieliniowy, więc zawsze produkuje harmoniczne 2×, 3×, 4×. Dlatego zaraz za nim MUSI stać filtr.'},
+ {n:6,nm:'filtr wyjściowy',k:'wcz',f:'3,5 MHz',sig:'ssb',cf:14,amp:.9,
+  did:'<b>Prawie nic nie zmienił w kształcie</b> — i o to chodzi. Usunął harmoniczne, których na tym rysunku nie widać, bo leżą daleko poza ekranem. Trochę stracił na amplitudzie: każdy filtr coś tłumi.',
+  role:'Filtr <b>dolnoprzepustowy</b>. Przepuszcza 3,5 MHz, dławi 7, 10,5, 14 MHz — czyli harmoniczne zrobione przez PA.',
+  i:'SSB + harmoniczne',o:'czysty SSB do anteny',
+  key:'Pytanie 333: brak filtru dolnoprzepustowego za PA → <b>zakłócenia od nieodfiltrowanych harmonicznych</b> (nie: zniekształcenia na częstotliwości roboczej).'},
+ {n:7,nm:'oscylator VFO 5–5,5 MHz',k:'inj',u:2,f:'5–5,5 MHz',sig:'rf',cf:24,amp:.6,
+  did:'Nic nie przetwarza — <b>produkuje z niczego</b> równą sinusoidę. Zero obwiedni, zero informacji.',
+  role:'Przestrajany generator. To on decyduje, gdzie w paśmie siedzisz: kręcisz gałką = kręcisz tym blokiem.',
+  i:'nic (generuje sam)',o:'czysta sinusoida 5–5,5 MHz',
+  key:'Zasilany od dołu do mieszacza → z definicji wstrzykiwacz, nie ogniwo toru.'}],
+ quiz:[[1,'106','Blok 1 to:',['wzmacniacz mocy (PA)','oscylator (VFO) 5 - 5,5 MHz','wzbudnica SSB 9 MHz'],2],
+ [2,'107','Blok 2 to:',['wzmacniacz sterujący','mieszacz','filtr wyjściowy'],1],
+ [3,'206','Blok 3 to:',['filtr pasmowy 3,5 - 14 MHz','wzmacniacz mocy (PA)','VFO 5 - 5,5 MHz'],0],
+ [4,'207','Blok 4 to:',['wzmacniacz sterujący','filtr wyjściowy','wzbudnica SSB 9 MHz'],0],
+ [5,'208','Blok 5 to:',['wzmacniacz mocy (PA)','mieszacz','oscylator (VFO) 5-5,5 MHz'],0],
+ [6,'209','Blok 6 to:',['wzmacniacz mocy (PA)','filtr wyjściowy','mieszacz'],1],
+ [7,'210','Blok 7 to:',['oscylator (VFO) 5-5,5 MHz','filtr wyjściowy','filtr pasmowy 3,5 - 14 MHz'],0]]},
+
+{id:'wzb',t:'Wnętrze wzbudnicy SSB',
+ note:'To nie jest osobne pytanie w puli, ale bez tego blok 1 nadajnika jest magią. Trzy kroki: <b>mnożenie → kasowanie nośnej → wycięcie jednej wstęgi</b>.',
+ src:{ic:'🎤',lab:'mikrofon',sig:'audio',amp:.12,f:'mowa, milivolty'},dst:{ic:'→',lab:'do mieszacza'},
+ blocks:[
+ {n:'A',nm:'wzmacniacz m.cz.',k:'mcz',f:'0,3–3 kHz',sig:'audio',amp:.55,
+  did:'<b>Tylko urósł.</b> Ten sam wolny kształt dźwięku, kilkaset razy wyżej. Nadal jest to sygnał, który słychać.',
+  role:'Zwykły wzmacniacz akustyczny. <b>To jedyne miejsce w całym nadajniku, gdzie sygnał jest słyszalny.</b>',
+  i:'mowa z mikrofonu, milivolty',o:'mowa, wolty — nadal m.cz.',
+  key:'Obwiednia, którą tu widzisz, przeżyje bez zmian całą drogę do anteny. Zapamiętaj jej kształt.'},
+ {n:'B',nm:'modulator zrównoważony',k:'wcz',f:'9 MHz DSB',sig:'dsb',cf:34,amp:.42,
+  did:'<b>Tu dzieje się rzecz najważniejsza w całym nadajniku.</b> Wolny dźwięk z wejścia stał się obwiednią szybkiej nośnej. Zauważ: obwiednia <b>dotyka zera</b> — bo nośna została wykasowana. Zostały same wstęgi.',
+  role:'Mnoży mowę przez nośną 9 MHz. „Zrównoważony" znaczy, że układ jest symetryczny i <b>sama nośna się w nim kasuje</b> — zostają dwie wstęgi wokół pustego miejsca. To jest DSB-SC.',
+  i:'mowa m.cz. + nośna 9 MHz z bloku D',o:'dwie wstęgi boczne, nośna wytłumiona',
+  key:'Amplituda przechodzi przez zero i faza się w tym punkcie odwraca. <b>W AM to niemożliwe</b> — tam nośna trzyma dno. To najprostszy sposób odróżnienia DSB od AM na oscyloskopie.'},
+ {n:'C',nm:'filtr kwarcowy',k:'wcz',f:'9 MHz SSB',sig:'ssb',cf:34,amp:.3,
+  did:'<b>Obciął połowę.</b> Wyrzucił jedną wstęgę — dlatego amplituda spadła mniej więcej o połowę, a obwiednia przestała dotykać zera. Informacja została w całości; energii ubyło.',
+  role:'Bardzo wąski filtr (ok. 2,4 kHz) przesunięty na zbocze widma. Przepuszcza jedną wstęgę, drugą tłumi o kilkadziesiąt dB.',
+  i:'DSB 9 MHz',o:'SSB 9 MHz — pół widma, cała informacja',
+  key:'Dlatego wzbudnica pracuje na stałej częstotliwości: <b>filtr kwarcowy jest nieprzestrajalny</b>. Strojenie robi dopiero mieszacz za nią.'},
+ {n:'D',nm:'generator nośnej 9 MHz',k:'inj',u:'B',f:'9 MHz',sig:'rf',cf:34,amp:.75,
+  did:'Produkuje z niczego równą sinusoidę 9 MHz. <b>Ta nośna zostanie w modulatorze zjedzona</b> — jej jedynym zadaniem jest przenieść mowę na 9 MHz.',
+  role:'Kwarcowy, stały, czysty.',i:'nic',o:'czysta sinusoida 9 MHz',
+  key:'Przesuwając ten generator o ±1,5 kHz względem filtru wybierasz <b>USB albo LSB</b>. To cała tajemnica przełącznika wstęgi.'}],quiz:[]},
+
+{id:'rx1',t:'Odbiornik AM, pojedyncza przemiana',
+ note:'Pytania <b>97, 98, 176–179</b>. Sześć bloków. Na rysunku jest jeszcze pętla <b>ARW</b> od detektora wstecz do bloków 2 i 3 — nie jest numerowana.',
+ src:{ic:'⌇',lab:'antena',sig:'am',amp:.05,f:'mikrowolty'},dst:{ic:'🔊',lab:'głośnik'},
+ blocks:[
+ {n:1,nm:'filtr wejściowy',k:'wcz',f:'np. 7 MHz',sig:'am',cf:34,amp:.045,
+  did:'<b>Prawie nic nie widać i to jest prawda o tym bloku.</b> Sygnał z anteny to mikrowolty. Filtr niczego nie wzmacnia — wyrzucił tylko wszystko, co jest poza pasmem, w tym częstotliwość lustrzaną.',
+  role:'Obwód strojony na wejściu. Przepuszcza pasmo, w którym słuchasz, i tłumi resztę — zwłaszcza <b>częstotliwość lustrzaną</b>.',
+  i:'wszystko, co złapała antena',o:'tylko interesujące pasmo, wciąż mikrowolty',
+  key:'Pierwszy blok od anteny to zawsze filtr albo wzmacniacz w.cz. — <b>nigdy detektor ani wzmacniacz akustyczny.</b>'},
+ {n:2,nm:'mieszacz',k:'pcz',f:'455 kHz',sig:'am',cf:12,amp:.06,
+  did:'<b>Rozrzedził przebieg</b> — z gęstej nośnej 7 MHz zrobiła się rzadka 455 kHz. Obwiednia bez zmian. Od tego momentu, cokolwiek odbierasz, w środku odbiornika jest zawsze ta sama częstotliwość.',
+  role:'Miesza odebrany sygnał z heterodyną (blok 6) i przenosi go na <b>stałą pośrednią</b>.',
+  i:'sygnał AM z pasma + sinusoida z bloku 6',o:'ten sam AM, ale na 455 kHz',
+  key:'Cała idea superheterodyny: <b>zamiast budować przestrajalny wąski filtr, przesuwamy sygnał pod filtr nieruchomy.</b>'},
+ {n:3,nm:'wzmacniacz p.cz.',k:'pcz',f:'455 kHz',sig:'am',cf:12,amp:.72,
+  did:'<b>Największy skok na całym rysunku.</b> Z ledwo widocznego przebiegu zrobił się pełny. Tu siedzi większość wzmocnienia odbiornika — kilkadziesiąt dB.',
+  role:'Tu jest <b>większość wzmocnienia i cała selektywność</b>. Wąski filtr na stałej częstotliwości robi to, czego nie da się zrobić na wejściu.',
+  i:'słaby AM na 455 kHz',o:'mocny AM na 455 kHz, sąsiedzi odcięci',
+  key:'To ten stopień dostaje ARW — gdy sygnał rośnie, jego wzmocnienie maleje, żeby głośność była stała.'},
+ {n:4,nm:'detektor AM',k:'mcz',f:'0,3–3 kHz',sig:'audio',amp:.32,
+  did:'<b>Nośna zniknęła, została sama koperta.</b> Porównaj oba przebiegi: po lewej gęsta nośna z obwiednią, po prawej sama obwiednia. To jest granica w.cz./m.cz. w tym odbiorniku.',
+  role:'Prostuje obwiednię. Dioda odcina jedną połówkę, kondensator wygładza w.cz. i zostaje sam kształt koperty — czyli dźwięk.',
+  i:'AM na 455 kHz',o:'sygnał akustyczny, milivolty',
+  key:'Pytanie 165: kondensator C1 w detektorze diodowym to <b>kondensator filtrujący prądy w.cz.</b> — zwiera resztki nośnej do masy.'},
+ {n:5,nm:'wzmacniacz akustyczny',k:'mcz',f:'0,3–3 kHz',sig:'audio',amp:.92,
+  did:'<b>Tylko urósł.</b> Ten sam dźwięk, mocy dość, żeby ruszyć głośnik.',
+  role:'Zwykłe audio.',i:'audio, milivolty',o:'audio, waty — do głośnika',
+  key:'<b>Reguła bez wyjątku: blok dotykający głośnika to wzmacniacz akustyczny.</b>'},
+ {n:6,nm:'heterodyna',k:'inj',u:2,f:'przestrajana',sig:'rf',cf:26,amp:.62,
+  did:'Produkuje czystą sinusoidę. Jej częstotliwość jest zawsze o 455 kHz wyższa (albo niższa) od tej, którą chcesz usłyszeć.',
+  role:'Generator, który przestrajasz gałką.',i:'nic',o:'czysta sinusoida',
+  key:'Pytanie 103 pyta o dopuszczalny dryf heterodyny po włączeniu odbiornika — warianty 200 / 500 / 1000 Hz. <b>Nie mam do tego klucza, sprawdź osobno.</b>'}],
+ quiz:[[1,'97','Blok 1 to:',['filtr wejściowy','wzmacniacz akustyczny','detektor AM'],0],
+ [2,'176','Blok 2 to:',['wzmacniacz akustyczny','mieszacz','detektor AM'],1],
+ [3,'177','Blok 3 to:',['filtr wejściowy','wzmacniacz pośredniej cz.','heterodyna'],1],
+ [4,'178','Blok 4 to:',['wzmacniacz akustyczny','filtr wejściowy','detektor AM'],2],
+ [5,'98','Blok 5 to:',['heterodyna','wzmacniacz akustyczny','detektor AM'],1],
+ [6,'179','Blok 6 to:',['filtr wejściowy','wzmacniacz akustyczny','heterodyna'],2]]},
+
+{id:'rx2',t:'Odbiornik AM / CW / SSB, podwójna przemiana',
+ note:'Pytania <b>99, 100, 180–188</b>. Tor idzie 1→2→3→4→6→7→8→9. Trzy bloki wiszą pod spodem: <b>11</b> pod pierwszym mieszaczem, <b>5</b> pod drugim, <b>10</b> pod detektorem.',
+ src:{ic:'⌇',lab:'antena',sig:'ssb',amp:.05,f:'mikrowolty'},dst:{ic:'🔊',lab:'głośnik'},
+ blocks:[
+ {n:1,nm:'wzmacniacz w.cz.',k:'wcz',f:'np. 14 MHz',sig:'ssb',cf:36,amp:.13,
+  did:'<b>Podniósł sygnał ponad szumy mieszacza.</b> Skromnie — 2–3×. Nie chodzi o głośność, tylko o to, żeby mieszacz dostał coś więcej niż własny szum.',
+  role:'Pierwszy stopień od anteny. Musi mieć <b>mały szum własny</b> — to on ustala czułość całego odbiornika.',
+  i:'mikrowolty z anteny',o:'ten sam sygnał, kilkakrotnie większy',
+  key:'Tu wpina się tłumik: chroni ten stopień przed przesterowaniem. <b>Nie poprawia stosunku sygnał/szum</b> — poprawia odporność na silne sygnały.'},
+ {n:2,nm:'I mieszacz',k:'pcz',f:'I p.cz. 9 MHz',sig:'ssb',cf:22,amp:.10,
+  did:'<b>Rozrzedził przebieg</b> (14 MHz → 9 MHz) i przy okazji trochę stracił: mieszacze mają stratę, nie wzmocnienie. Obwiednia bez zmian.',
+  role:'Pierwsza przemiana na wysoką pierwszą pośrednią — wysoką celowo, bo wtedy częstotliwość lustrzana leży daleko.',
+  i:'sygnał z pasma + I heterodyna strojona (blok 11)',o:'sygnał na I p.cz.',
+  key:'Strzałka od dołu → pod nim stoi heterodyna. Zawsze.'},
+ {n:3,nm:'wzmacniacz I p.cz.',k:'pcz',f:'I p.cz.',sig:'ssb',cf:22,amp:.34,
+  did:'<b>Tylko urósł</b>, ok. 3×. Częstotliwość i kształt bez zmian.',
+  role:'Wzmacnia na pierwszej pośredniej i wstępnie zawęża pasmo.',
+  i:'słaby sygnał na I p.cz.',o:'mocniejszy, ten sam kształt',
+  key:'Wariant „heterodyna" przy tym bloku to pułapka — blok 3 leży <b>w torze</b>, nie pod nim.'},
+ {n:4,nm:'II mieszacz',k:'pcz',f:'II p.cz. 455 kHz',sig:'ssb',cf:11,amp:.28,
+  did:'<b>Znów rozrzedził</b> — 9 MHz → 455 kHz. Przebieg jest teraz wyraźnie wolniejszy niż na wejściu. Obwiednia dalej ta sama.',
+  role:'Druga przemiana na niską pośrednią — bo dopiero na 455 kHz da się zrobić naprawdę wąski filtr (500 Hz dla CW).',
+  i:'I p.cz. + II heterodyna stała (blok 5)',o:'sygnał na 455 kHz',
+  key:'Podwójna przemiana to kompromis: <b>wysoka I p.cz. załatwia lustro, niska II p.cz. załatwia selektywność.</b> Jedna przemiana nie umie obu naraz.'},
+ {n:5,nm:'II heterodyna stała',k:'inj',u:4,f:'stała',sig:'rf',cf:20,amp:.62,
+  did:'Czysta sinusoida, nieruchoma. Nie musi się przestrajać, bo strojenie zrobiła już I heterodyna.',
+  role:'Kwarcowa, nieprzestrajana.',i:'nic',o:'czysta sinusoida, stała',
+  key:'Stoi pod blokiem 4 → wstrzykiwacz. Numeracja skacze w dół i wraca do toru — <b>to nie znaczy, że blok 5 jest po bloku 4 w torze.</b>'},
+ {n:6,nm:'filtr przełączany II p.cz.',k:'pcz',f:'455 kHz',sig:'ssb',cf:11,amp:.24,
+  did:'<b>Filtr, więc trochę stracił i nic nie dodał.</b> Za to wyciął sąsiednie stacje, których na tym rysunku nie widać, bo pokazuje tylko twój sygnał.',
+  role:'Zestaw filtrów kwarcowych przełączanych zależnie od emisji: <b>~6 kHz AM, ~2,4 kHz SSB, ~500 Hz CW</b>. To gałka „szerokość pasma".',
+  i:'sygnał na 455 kHz z sąsiadami',o:'tylko interesujące pasmo',
+  key:'Dlatego ten odbiornik obsługuje AM, CW i SSB jednym torem — zmienia się tylko filtr i sposób detekcji.'},
+ {n:7,nm:'wzmacniacz II p.cz.',k:'pcz',f:'455 kHz',sig:'ssb',cf:11,amp:.85,
+  did:'<b>Duży skok</b> — do pełnej skali. To główne wzmocnienie odbiornika, kilkadziesiąt dB. Popatrz na obwiednię: <b>siedem bloków od anteny i nikt jej nie ruszył.</b>',
+  role:'Główne wzmocnienie, sterowane przez ARW.',i:'wąskie, słabe',o:'wąskie, mocne',
+  key:'To jest reguła nr 3 na własne oczy: mieszacz przesuwa, wzmacniacz skaluje, filtr wycina — <b>kształt zostaje.</b>'},
+ {n:8,nm:'detektor AM / CW / SSB',k:'mcz',f:'0,3–3 kHz',sig:'audio',amp:.3,
+  did:'<b>Nośna znikła, została sama koperta.</b> Granica w.cz./m.cz. Wszystko na lewo to radio, wszystko na prawo to dźwięk.',
+  role:'Miesza sygnał z <b>BFO</b> (blok 10) i wytwarza słyszalne dudnienie. Dla AM działa jak prostownik obwiedni; dla CW i SSB bez BFO usłyszałbyś ciszę albo bulgot.',
+  i:'455 kHz + BFO',o:'audio',
+  key:'Tu przebiega granica. Blok przed wzmacniaczem akustycznym to <b>zawsze</b> detektor.'},
+ {n:9,nm:'wzmacniacz akustyczny',k:'mcz',f:'0,3–3 kHz',sig:'audio',amp:.92,
+  did:'<b>Tylko urósł.</b> Ten sam dźwięk, moc dla głośnika.',
+  role:'Ostatni stopień.',i:'audio, milivolty',o:'audio, waty',
+  key:'Dotyka głośnika → wzmacniacz akustyczny. Reguła nr 1.'},
+ {n:10,nm:'BFO',k:'inj',u:8,f:'ok. 455 kHz',sig:'rf',cf:16,amp:.62,
+  did:'Czysta sinusoida tuż obok pośredniej. <b>Podstawia „sztuczną nośną"</b>, której CW i SSB nie mają.',
+  role:'Beat Frequency Oscillator. Bez niej niemodulowana kreska telegrafii to <b>cisza</b>, bo detektor nie ma czego z czym zdudnić.',
+  i:'nic',o:'czysta sinusoida tuż obok p.cz.',
+  key:'Pytanie 227: BFO jest niezbędny do odbioru <b>telegrafii A1 i modulacji amplitudy ze zredukowaną falą nośną</b> — czyli tam, gdzie nośnej brakuje. Do FM i pełnego AM nie.'},
+ {n:11,nm:'I heterodyna strojona',k:'inj',u:2,f:'przestrajana',sig:'rf',cf:30,amp:.62,
+  did:'Czysta sinusoida, przestrajana. <b>To jest gałka VFO</b> — jedyny blok, który ruszasz.',
+  role:'Reszta odbiornika stoi w miejscu.',i:'nic',o:'czysta sinusoida, przestrajana',
+  key:'Trzy wstrzykiwacze w tym schemacie: <b>11, 5, 10</b>. Wszystkie pod spodem, żaden w torze.'}],
+ quiz:[[1,'99','Blok 1 to:',['wzmacniacz w.cz.','wzmacniacz akustyczny','detektor AM CW SSB'],0],
+ [2,'180','Blok 2 to:',['wzmacniacz akustyczny','I mieszacz','filtr przełączany II p.cz.'],1],
+ [3,'181','Blok 3 to:',['BFO','wzmacniacz I pośredniej cz.','heterodyna'],1],
+ [4,'182','Blok 4 to:',['wzmacniacz akustyczny','BFO','II mieszacz'],2],
+ [5,'183','Blok 5 to:',['II heterodyna stała','wzmacniacz akustyczny','detektor AM CW SSB'],0],
+ [6,'184','Blok 6 to:',['filtr przełączany II p.cz.','wzmacniacz akustyczny','II heterodyna stała'],0],
+ [7,'185','Blok 7 to:',['BFO','wzmacniacz II pośredniej cz.','detektor AM, CW, SSB'],1],
+ [8,'186','Blok 8 to:',['wzmacniacz akustyczny','wzmacniacz w.cz.','detektor AM, CW, SSB'],2],
+ [9,'100','Blok 9 to:',['wzmacniacz akustyczny','wzmacniacz pośredniej cz.','heterodyna'],0],
+ [10,'187','Blok 10 to:',['wzmacniacz akustyczny','BFO','detektor AM, CW, SSB'],1],
+ [11,'188','Blok 11 to:',['I heterodyna strojona','wzmacniacz akustyczny','detektor AM'],0]]},
+
+{id:'fm',t:'Odbiornik FM 144 MHz, podwójna przemiana',
+ note:'Pytania <b>102, 192–200</b>. Tor 1→2→3→4→5→6→7. Pod spodem: <b>10</b> pod blokiem 2, <b>9</b> pod blokiem 4, a <b>8</b> to blokada szumów sterująca torem audio.',
+ src:{ic:'⌇',lab:'antena',sig:'fm',amp:.05,f:'mikrowolty'},dst:{ic:'🔊',lab:'głośnik'},
+ blocks:[
+ {n:1,nm:'wzmacniacz w.cz.',k:'wcz',f:'144 MHz',sig:'fm',cf:38,amp:.14,
+  did:'Podniósł sygnał. Popatrz uważnie na kształt: <b>amplituda jest stała</b>, zmienia się tylko zagęszczenie. To odwrotność SSB i AM.',
+  role:'Stopień wejściowy na 144 MHz. Na UKF <b>szumy własne odbiornika decydują o czułości</b>, bo szum atmosferyczny jest tu bardzo mały — inaczej niż na KF.',
+  i:'FM z anteny',o:'FM, wzmocniony',
+  key:'Pytanie 318: szumy własne odbiornika liczą się <b>na UKF i mikrofalach</b>.'},
+ {n:2,nm:'I mieszacz',k:'pcz',f:'10,7 MHz',sig:'fm',cf:20,amp:.11,
+  did:'<b>Rozrzedził</b> — 144 MHz → 10,7 MHz. Amplituda dalej stała, bo mieszacz nie rusza kształtu.',
+  role:'Pierwsza przemiana na 10,7 MHz.',i:'144 MHz + I heterodyna kwarcowa (blok 10)',o:'FM na 10,7 MHz',
+  key:'„Stabilizowany kwarcami" i „kanałowy" znaczy, że heterodyna nie jest płynnie przestrajana — <b>skacze po kanałach.</b>'},
+ {n:3,nm:'wzmacniacz I p.cz. 10,7 MHz',k:'pcz',f:'10,7 MHz',sig:'fm',cf:20,amp:.36,
+  did:'<b>Tylko urósł.</b>',role:'Wzmocnienie i selektywność na pierwszej pośredniej.',
+  i:'słaby FM 10,7 MHz',o:'mocniejszy FM 10,7 MHz',
+  key:'10,7 MHz to <b>standardowa I p.cz. w sprzęcie UKF</b> — wartość warta zapamiętania, bo pada w wariantach.'},
+ {n:4,nm:'II mieszacz',k:'pcz',f:'455 kHz',sig:'fm',cf:10,amp:.3,
+  did:'<b>Rozrzedził ponownie</b> — 10,7 MHz → 455 kHz.',
+  role:'Druga przemiana, gdzie da się zrobić wąski filtr kanałowy.',
+  i:'10,7 MHz + II heterodyna stała (blok 9)',o:'FM na 455 kHz',
+  key:'Ta sama logika co w odbiorniku KF: wysoka I p.cz. na lustro, niska II p.cz. na selektywność.'},
+ {n:5,nm:'wzmacniacz II p.cz. 455 kHz',k:'pcz',f:'455 kHz',sig:'fm',cf:10,amp:.88,
+  did:'<b>Urósł i celowo się nasycił.</b> Ten stopień pracuje jako <b>ogranicznik</b>: ścina amplitudę do stałej. W FM to nie jest wada — informacja siedzi w częstotliwości, więc amplitudę można spokojnie wyrzucić razem z trzaskami.',
+  role:'Główne wzmocnienie + ogranicznik.',i:'FM 455 kHz',o:'FM o wyrównanej amplitudzie',
+  key:'Dlatego <b>FM jest odporny na trzaski i zaniki</b>: ogranicznik wyrzuca zakłócenia amplitudowe do kosza. SSB tak nie może — tam amplituda jest informacją.'},
+ {n:6,nm:'detektor FM',k:'mcz',f:'0,3–3 kHz',sig:'audio',amp:.3,
+  did:'<b>Zamienił zagęszczenie na kształt.</b> Na wejściu równa amplituda i zmienna częstotliwość, na wyjściu zwykły dźwięk.',
+  role:'Może być zbudowany na <b>pętli synchronizacji fazy (PLL)</b>, dyskryminatorze albo detektorze stosunkowym.',
+  i:'FM 455 kHz',o:'audio',
+  key:'Pytanie 267: demodulator FM może być zbudowany <b>z użyciem pętli synchronizacji fazy</b> — nie z pojedynczej diody z kondensatorem (to detektor AM).'},
+ {n:7,nm:'wzmacniacz akustyczny',k:'mcz',f:'0,3–3 kHz',sig:'audio',amp:.92,
+  did:'<b>Tylko urósł.</b>',role:'Napędza głośnik.',i:'audio, milivolty',o:'audio, waty',
+  key:'Dotyka głośnika. Reguła nr 1.'},
+ {n:8,nm:'blokada szumów (squelch)',k:'inj',u:7,f:'—',sig:'noise',amp:.35,
+  did:'<b>Jedyny blok, który nie przenosi sygnału, tylko nim steruje.</b> Nasłuchuje szumu — o, tego chaosu — i gdy szumu jest dużo (czyli nie ma stacji), zamyka tor audio.',
+  role:'Gdy nie ma sygnału, w detektorze FM panuje głośny syk. Squelch to wykrywa i <b>zamyka tor audio</b>. Gdy pojawi się stacja, szum znika i squelch otwiera.',
+  i:'poziom szumu z toru',o:'sygnał sterujący: otwórz / zamknij audio',
+  key:'Stąd nietypowe połączenie na rysunku — nie jest ani w torze, ani zwykłym wstrzykiwaczem.'},
+ {n:9,nm:'II heterodyna stała',k:'inj',u:4,f:'stała',sig:'rf',cf:18,amp:.62,
+  did:'Czysta sinusoida, nieruchoma.',role:'Kwarcowa.',i:'nic',o:'czysta sinusoida',
+  key:'Pod blokiem 4 → wstrzykiwacz.'},
+ {n:10,nm:'I heterodyna kwarcowa',k:'inj',u:2,f:'kanałowa',sig:'rf',cf:32,amp:.62,
+  did:'Czysta sinusoida na wybranym kanale.',role:'Kwarcowa, przełączana kanałami. W nowszym sprzęcie zastąpiona przez PLL albo DDS.',
+  i:'nic',o:'czysta sinusoida na kanale',key:'Pod blokiem 2 → wstrzykiwacz.'}],
+ quiz:[[1,'192','Blok 1 to:',['wzmacniacz w.cz.','wzmacniacz akustyczny','detektor FM'],0],
+ [2,'102','Blok 2 to:',['wzmacniacz akustyczny','I mieszacz','wzmacniacz II p.cz.'],1],
+ [3,'193','Blok 3 to:',['wzmacniacz w.cz.','wzmacniacz I pośredniej cz. 10,7 MHz','I heterodyna'],1],
+ [4,'194','Blok 4 to:',['wzmacniacz akustyczny','blokada szumów','II mieszacz'],2],
+ [5,'195','Blok 5 to:',['II heterodyna stała','wzmacniacz II p.cz. 455 kHz','detektor FM'],1],
+ [6,'196','Blok 6 to:',['detektor FM','wzmacniacz akustyczny','II heterodyna stała'],0],
+ [7,'197','Blok 7 to:',['wzmacniacz II p. cz. 455kHz','wzmacniacz akustyczny','detektor FM'],1],
+ [8,'198','Blok 8 to:',['wzmacniacz akustyczny','blokada szumów','detektor FM'],1],
+ [9,'199','Blok 9 to:',['wzmacniacz akustyczny','blokada szumów','II heterodyna stała'],2],
+ [10,'200','Blok 10 to:',['I heterodyna kwarcowa','wzmacniacz akustyczny','detektor FM'],0]]},
+
+{id:'hom',t:'Odbiornik homodynowy (bezpośredniej przemiany)',
+ note:'Pytanie <b>101</b> i sąsiednie. Cztery bloki — najprostszy odbiornik, jaki istnieje. <b>Nie ma pośredniej wcale</b>: heterodyna stoi dokładnie na częstotliwości sygnału, więc różnica wychodzi od razu jako dźwięk.',
+ src:{ic:'⌇',lab:'antena',sig:'ssb',amp:.05,f:'mikrowolty'},dst:{ic:'🔊',lab:'głośnik'},
+ blocks:[
+ {n:1,nm:'wzmacniacz w.cz.',k:'wcz',f:'np. 7 MHz',sig:'ssb',cf:36,amp:.16,
+  did:'<b>Podniósł sygnał.</b> Nadal w.cz.',role:'Stopień wejściowy z obwodem strojonym.',
+  i:'sygnał z anteny',o:'sygnał wzmocniony',key:'Pierwszy od anteny — jak w każdym odbiorniku.'},
+ {n:2,nm:'mieszacz',k:'mcz',f:'0,3–3 kHz',sig:'audio',amp:.08,
+  did:'<b>Największy skrót w całym radiu.</b> Na wejściu w.cz., na wyjściu od razu dźwięk — bez żadnej pośredniej. Bo heterodyna stoi na tej samej częstotliwości, więc różnica wypada w paśmie akustycznym.',
+  role:'Miesza sygnał z heterodyną nastawioną <b>na tę samą częstotliwość</b>.',
+  i:'sygnał w.cz. + heterodyna na tej samej częstotliwości',o:'audio, od razu',
+  key:'Na rysunku mieszacz ma symbol ⊗ (kółko z krzyżykiem) — to znak mnożenia, bo <b>mieszacz dosłownie mnoży dwa napięcia.</b>'},
+ {n:3,nm:'wzmacniacz akustyczny',k:'mcz',f:'0,3–3 kHz',sig:'audio',amp:.92,
+  did:'<b>Ogromne wzmocnienie</b> — bo w tym odbiorniku całe wzmocnienie siedzi na m.cz. Nie ma stopni p.cz., które by je wzięły na siebie.',
+  role:'Całe wzmocnienie odbiornika.',i:'audio, mikrowolty',o:'audio do głośnika',
+  key:'Reguła nr 1 działa nawet w schemacie o czterech blokach.'},
+ {n:4,nm:'heterodyna (VFO)',k:'inj',u:2,f:'= częstotliwość sygnału',sig:'rf',cf:36,amp:.65,
+  did:'Czysta sinusoida na dokładnie tej samej częstotliwości co odbierana stacja.',
+  role:'Przestrajana.',i:'nic',o:'czysta sinusoida',
+  key:'Wada homodyny: słychać <b>obie wstęgi naraz</b> i nie ma selektywności p.cz. Zaleta: cztery bloki i działa.'}],quiz:[]}
+];
+
+let cur=0,sel=0,frozen=false,slow=false,exam=false,t0=performance.now(),score={ok:0,all:0},answered={};
+const $=id=>document.getElementById(id);
+const chainOf=c=>c.blocks.filter(b=>b.k!=='inj');
+function prevOf(c,i){const b=c.blocks[i];
+  if(b.k==='inj')return null;
+  const ch=chainOf(c),j=ch.indexOf(b);
+  return j>0?ch[j-1]:{sig:c.src.sig,amp:c.src.amp,cf:c.src.cf||34,f:c.src.f,nm:c.src.lab};}
+
+$('tabs').innerHTML=CH.map((c,i)=>`<button role="tab" data-i="${i}" aria-selected="${i===0}">${c.t.split('(')[0].trim()}</button>`).join('');
+$('tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;cur=+b.dataset.i;sel=0;answered={};render();};
+
+function render(){
+  const c=CH[cur];
+  [...$('tabs').children].forEach((b,i)=>b.setAttribute('aria-selected',i===cur));
+  $('chainttl').innerHTML='<b>'+c.t+'.</b> '+c.note;
+  const ch=chainOf(c),injs=c.blocks.filter(b=>b.k==='inj');
+  let col=1,pos={},h='';
+  h+=`<div class="term" style="grid-column:1;grid-row:1">${c.src.ic?'<span class="ic">'+c.src.ic+'</span>':''}${c.src.lab}</div>`;col=2;
+  ch.forEach(b=>{
+    h+=`<div class="arr" style="grid-column:${col};grid-row:1">→</div>`;col++;pos[b.n]=col;
+    h+=`<div class="unit k-${b.k}" data-n="${b.n}" style="grid-column:${col};grid-row:1">
+      <button class="blk"><span class="n">${b.n}.</span><span class="nm">${b.nm}</span></button>
+      <div class="mini"><span class="mlab">${b.f}</span><canvas data-c="${b.n}"></canvas></div></div>`;col++;});
+  h+=`<div class="arr" style="grid-column:${col};grid-row:1">→</div>`;col++;
+  h+=`<div class="term" style="grid-column:${col};grid-row:1">${c.dst.ic?'<span class="ic">'+c.dst.ic+'</span>':''}${c.dst.lab}</div>`;
+  injs.forEach(b=>{const cc=pos[b.u]||3;
+    h+=`<div class="vbar" style="grid-column:${cc};grid-row:2">↑</div>`;
+    h+=`<div class="unit k-inj" data-n="${b.n}" style="grid-column:${cc};grid-row:3">
+      <button class="blk"><span class="n">${b.n}.</span><span class="nm">${b.nm}</span></button>
+      <div class="mini"><span class="mlab">${b.f}</span><canvas data-c="${b.n}"></canvas></div></div>`;});
+  const g=$('grid');g.innerHTML=h;g.classList.toggle('exam',exam);
+  g.onclick=e=>{const u=e.target.closest('.unit');if(!u)return;
+    sel=c.blocks.findIndex(x=>String(x.n)===u.dataset.n);paint();};
+  paint();
+}
+
+function paint(){
+  const c=CH[cur],b=c.blocks[sel],p=prevOf(c,sel);
+  [...$('grid').querySelectorAll('.unit')].forEach(u=>u.classList.toggle('sel',String(u.dataset.n)===String(b.n)));
+  const kn={mcz:'m.cz. — słyszalne',wcz:'w.cz. — radiowe',pcz:'p.cz. — pośrednia',inj:'wstrzykiwacz'}[b.k];
+  $('fin').innerHTML = p?`${p.nm||('blok '+p.n)} → &nbsp;<b>${p.f}</b>`:'<b>nic — ten blok generuje sygnał sam</b>';
+  $('fout').innerHTML=`<b>${b.f}</b>`;
+  $('sin').innerHTML  = p?SEE[p.sig]:'Wstrzykiwacz nie ma wejścia sygnałowego.';
+  $('sout').innerHTML = SEE[b.sig];
+  $('info').innerHTML=`<p class="name">Blok ${b.n}${exam?'':' — '+b.nm}<span class="badge b-${b.k}">${kn}</span></p>
+    <div class="change"><b>Co ten blok zrobił z sygnałem:</b> ${exam?'<span style="color:var(--ink3)">ukryte w trybie egzaminu</span>':b.did}</div>
+    ${exam?'':`<p class="role">${b.role}</p><div class="key">${b.key}</div>`}`;
+  const q=(c.quiz||[]).find(x=>String(x[0])===String(b.n)),qz=$('quiz');
+  if(exam&&q){qz.classList.add('on');
+    qz.innerHTML=`<p class="q"><span class="pill">pyt. ${q[1]}</span> &nbsp;${q[2]}</p><div class="opts">`+
+      q[3].map((o,i)=>`<button data-i="${i}">${'ABC'[i]}. ${o}</button>`).join('')+
+      `</div><p class="score">wynik: ${score.ok}/${score.all}</p>`;
+    qz.querySelector('.opts').onclick=e=>{const bt=e.target.closest('button');if(!bt||answered[b.n])return;
+      answered[b.n]=1;score.all++;const i=+bt.dataset.i;
+      if(i===q[4]){score.ok++;bt.classList.add('ok');}else{bt.classList.add('no');
+        qz.querySelector(`[data-i="${q[4]}"]`).classList.add('ok');}
+      qz.querySelector('.score').textContent=`wynik: ${score.ok}/${score.all}`;};
+  }else qz.classList.remove('on');
+}
+
+function ctx(cv){const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;
+  if(!r.width)return null;
+  if(cv.width!==Math.round(r.width*d)){cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);}
+  const x=cv.getContext('2d');x.setTransform(d,0,0,d,0,0);return[x,r.width,r.height];}
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const COL={mcz:'--mcz',wcz:'--wcz',pcz:'--pcz',inj:'--inj'};
+
+function wave(x,W,H,b,t,big){
+  const f=S[b.sig]||S.none, cf=b.cf||8, A=(b.amp??.5)*H*0.44;
+  if(big&&['ssb','dsb','am','mix2'].includes(b.sig)){
+    x.strokeStyle=x.fillStyle;x.globalAlpha=.35;x.lineWidth=1.2;x.setLineDash([4,3]);
+    for(const s of[1,-1]){x.beginPath();
+      for(let px=0;px<=W;px++){const u=px/W;let mx=0;
+        for(let k=0;k<11;k++){const v=Math.abs(f(u+k*0.0005,t,cf));if(v>mx)mx=v;}
+        const y=H/2-s*mx*A;px?x.lineTo(px,y):x.moveTo(px,y);}x.stroke();}
+    x.setLineDash([]);x.globalAlpha=1;
+  }
+  if(big&&b.sig==='fm'){x.strokeStyle=x.fillStyle;x.globalAlpha=.35;x.setLineDash([4,3]);x.lineWidth=1.2;
+    for(const s of[1,-1]){x.beginPath();x.moveTo(0,H/2-s*A);x.lineTo(W,H/2-s*A);x.stroke();}
+    x.setLineDash([]);x.globalAlpha=1;}
+  x.lineWidth=big?1.7:1.2;x.beginPath();
+  for(let px=0;px<=W;px++){const u=px/W,y=H/2-f(u,t,cf)*A;px?x.lineTo(px,y):x.moveTo(px,y);}
+  x.stroke();
+}
+
+function draw(now){
+  const t=frozen?12.5:((now-t0)/1000)*(slow?0.2:1);
+  const c=CH[cur];
+  // miniaturki
+  $('grid').querySelectorAll('canvas[data-c]').forEach(cv=>{
+    const b=c.blocks.find(x=>String(x.n)===cv.dataset.c);if(!b)return;
+    const r=ctx(cv);if(!r)return;const[x,W,H]=r;
+    x.clearRect(0,0,W,H);
+    x.strokeStyle=css('--grid');x.lineWidth=1;x.beginPath();x.moveTo(0,H/2);x.lineTo(W,H/2);x.stroke();
+    x.strokeStyle=x.fillStyle=css(COL[b.k]);
+    wave(x,W,H,b,t,false);});
+  // duże: wejście / wyjście
+  const b=c.blocks[sel],p=prevOf(c,sel);
+  [[$('cin'),p],[$('cout'),b]].forEach(([cv,blk])=>{
+    const r=ctx(cv);if(!r)return;const[x,W,H]=r;
+    x.clearRect(0,0,W,H);
+    x.strokeStyle=css('--grid');x.lineWidth=1;
+    for(let i=1;i<10;i++){x.beginPath();x.moveTo(W*i/10,0);x.lineTo(W*i/10,H);x.stroke();}
+    for(let i=1;i<4;i++){x.beginPath();x.moveTo(0,H*i/4);x.lineTo(W,H*i/4);x.stroke();}
+    if(!blk){x.fillStyle=css('--ink3');x.font='12px ui-sans-serif,sans-serif';
+      x.fillText('ten blok generuje sygnał sam — nie ma wejścia',14,H/2);return;}
+    x.strokeStyle=x.fillStyle=css(COL[blk.k]||'--ink2');
+    wave(x,W,H,blk,t,true);
+    x.fillStyle=css('--ink3');x.font='10px ui-sans-serif,sans-serif';
+    x.fillText('skala amplitudy wspólna dla całego toru',8,H-6);});
+  requestAnimationFrame(draw);
+}
+
+$('examBtn').onclick=e=>{exam=!exam;e.target.setAttribute('aria-pressed',exam);
+  e.target.textContent=exam?'Tryb egzaminu — WŁĄCZONY':'Tryb egzaminu — ukryj nazwy';
+  $('hint').textContent=exam?'kliknij blok → odpowiedz':'klikaj bloki';render();};
+$('freezeBtn').onclick=e=>{frozen=!frozen;e.target.setAttribute('aria-pressed',frozen);
+  e.target.textContent=frozen?'Wznów':'Zatrzymaj';};
+$('slowBtn').onclick=e=>{slow=!slow;e.target.setAttribute('aria-pressed',slow);
+  e.target.textContent=slow?'Normalne tempo':'Zwolnij 5×';};
+addEventListener('resize',()=>{});
+render();requestAnimationFrame(draw);
+</script></body></html>

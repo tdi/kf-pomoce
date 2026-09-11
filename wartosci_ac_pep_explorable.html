@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<!--
+  ENGRAM EXPLORABLE
+  node:      prad-zmienny-wartosci-i-decybel  (część: wartości przebiegu AC + PEP)
+  topic:     krotkofalarstwo-a
+  generated: 2026-07-30
+             analogie: burst vs sustained throughput, requests/limits, p95 vs średnia
+  scaffold:  novice  → clause-2 worked drive (przykład prowadzony) przed swobodną manipulacją
+  zakres:    świadomie POMIJA decybele — dla dB jest osobny explorable
+  self-contained: brak CDN, fontów, obrazów i jakichkolwiek żądań sieciowych
+-->
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wartości przebiegu sinusoidalnego i PEP — explorable</title>
+<style>
+:root{
+  --bg:#f6f6f3; --panel:#ffffff; --panel2:#f0f0ec; --fg:#17181a; --muted:#585d64;
+  --border:#d9d9d2; --shadow:rgba(0,0,0,.06);
+  --grid:#e2e2db; --axis:#a9aba5;
+  --trace:#0d7a3f;
+  --c-max:#c2410c;
+  --c-pp:#6d28d9;
+  --c-rms:#0e7490;
+  --c-bad:#b3261e;
+  --c-pow:#b45309; --c-pow-fill:rgba(180,83,9,.20);
+  --c-dc:#1d4ed8; --c-dc-fill:rgba(29,78,216,.16);
+  --ok:#15803d; --ok-bg:#e6f4ea;
+  --warn-bg:#fdf0e6;
+  --bad-bg:#fceceb;
+  --accent:#1d4ed8;
+  --chip-bg:rgba(255,255,255,.88);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#111315; --panel:#191c1f; --panel2:#212528; --fg:#e9eaec; --muted:#a3a9b1;
+    --border:#31363b; --shadow:rgba(0,0,0,.5);
+    --grid:#262b2f; --axis:#4d545b;
+    --trace:#3ddc84;
+    --c-max:#ff9d5c;
+    --c-pp:#c4a6ff;
+    --c-rms:#5cd7f0;
+    --c-bad:#ff7b6e;
+    --c-pow:#f0b429; --c-pow-fill:rgba(240,180,41,.20);
+    --c-dc:#79a6ff; --c-dc-fill:rgba(121,166,255,.18);
+    --ok:#5ddb8e; --ok-bg:#123021;
+    --warn-bg:#33240f;
+    --bad-bg:#3a1a17;
+    --accent:#79a6ff;
+    --chip-bg:rgba(20,23,26,.86);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f6f6f3; --panel:#ffffff; --panel2:#f0f0ec; --fg:#17181a; --muted:#585d64;
+  --border:#d9d9d2; --shadow:rgba(0,0,0,.06);
+  --grid:#e2e2db; --axis:#a9aba5; --trace:#0d7a3f; --c-max:#c2410c; --c-pp:#6d28d9;
+  --c-rms:#0e7490; --c-bad:#b3261e; --c-pow:#b45309; --c-pow-fill:rgba(180,83,9,.20);
+  --c-dc:#1d4ed8; --c-dc-fill:rgba(29,78,216,.16); --ok:#15803d; --ok-bg:#e6f4ea;
+  --warn-bg:#fdf0e6; --bad-bg:#fceceb; --accent:#1d4ed8; --chip-bg:rgba(255,255,255,.88);
+}
+:root[data-theme="dark"]{
+  --bg:#111315; --panel:#191c1f; --panel2:#212528; --fg:#e9eaec; --muted:#a3a9b1;
+  --border:#31363b; --shadow:rgba(0,0,0,.5); --grid:#262b2f; --axis:#4d545b;
+  --trace:#3ddc84; --c-max:#ff9d5c; --c-pp:#c4a6ff; --c-rms:#5cd7f0; --c-bad:#ff7b6e;
+  --c-pow:#f0b429; --c-pow-fill:rgba(240,180,41,.20); --c-dc:#79a6ff;
+  --c-dc-fill:rgba(121,166,255,.18); --ok:#5ddb8e; --ok-bg:#123021; --warn-bg:#33240f;
+  --bad-bg:#3a1a17; --accent:#79a6ff; --chip-bg:rgba(20,23,26,.86);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--fg);
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  padding:0 16px 96px;
+}
+.wrap{max-width:880px;margin:0 auto}
+header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:28px 0 8px}
+h1{font-size:1.5rem;line-height:1.25;margin:0 0 6px}
+.sub{color:var(--muted);font-size:.92rem;margin:0}
+button{font:inherit;color:inherit}
+.btn{
+  background:var(--panel2); color:var(--fg); border:1px solid var(--border);
+  border-radius:8px; padding:8px 14px; cursor:pointer;
+}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{
+  outline:3px solid var(--accent); outline-offset:2px
+}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+@media (prefers-color-scheme:dark){.btn.primary{color:#0d1117}}
+:root[data-theme="light"] .btn.primary{color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#0d1117}
+.btn.small{padding:5px 10px;font-size:.86rem}
+section{
+  background:var(--panel); border:1px solid var(--border); border-radius:14px;
+  padding:20px 20px 22px; margin:20px 0; box-shadow:0 1px 2px var(--shadow);
+}
+section.locked{opacity:.42;filter:saturate(.25)}
+section.locked .body{display:none}
+h2{font-size:1.16rem;margin:0 0 4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tag{
+  font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700;
+  background:var(--panel2);border:1px solid var(--border);border-radius:999px;padding:3px 9px;color:var(--muted)
+}
+.lede{color:var(--muted);margin:.2rem 0 1rem;font-size:.95rem}
+p{margin:.7rem 0}
+canvas{display:block;width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:10px;touch-action:none}
+.ctrls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:14px 0 6px}
+.ctrl{display:flex;flex-direction:column;gap:2px;min-width:250px;flex:1}
+.ctrl label{font-size:.84rem;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--accent);height:26px}
+input[type=text],input[type=number]{
+  background:var(--panel2);border:1px solid var(--border);border-radius:8px;
+  padding:8px 10px;color:var(--fg);width:150px;font:inherit
+}
+textarea{
+  background:var(--panel2);border:1px solid var(--border);border-radius:8px;
+  padding:10px;color:var(--fg);width:100%;font:inherit;min-height:76px;resize:vertical
+}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}
+.ro{border:1px solid var(--border);border-left-width:5px;border-radius:8px;padding:9px 11px;background:var(--panel2)}
+.ro .k{font-size:.78rem;color:var(--muted);display:block}
+.ro .v{font-size:1.16rem;font-weight:700;font-variant-numeric:tabular-nums}
+.ro.max{border-left-color:var(--c-max)} .ro.pp{border-left-color:var(--c-pp)}
+.ro.rms{border-left-color:var(--c-rms)} .ro.bad{border-left-color:var(--c-bad)}
+.ro.pow{border-left-color:var(--c-pow)} .ro.dc{border-left-color:var(--c-dc)}
+.gate{background:var(--panel2);border:1px dashed var(--border);border-radius:10px;padding:14px}
+.gate .q{font-weight:650;margin-bottom:8px}
+.reveal{display:none;margin-top:12px;border-left:4px solid var(--ok);background:var(--ok-bg);padding:11px 13px;border-radius:0 8px 8px 0}
+.reveal.show{display:block}
+.reveal.warn{border-left-color:var(--c-max);background:var(--warn-bg)}
+.reveal.bad{border-left-color:var(--c-bad);background:var(--bad-bg)}
+.note{font-size:.9rem;color:var(--muted)}
+.routes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:720px){.routes{grid-template-columns:1fr}.ctrl{min-width:100%}}
+.route{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--panel2)}
+.route h3{margin:0 0 6px;font-size:.95rem}
+.route .step{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92rem;margin:3px 0}
+.route.ok{border-color:var(--ok);border-width:2px}
+.route.err{border-color:var(--c-bad);background:var(--bad-bg)}
+.eq{
+  text-align:center;font-weight:700;margin:12px 0;padding:10px;border-radius:10px;
+  background:var(--panel2);border:1px solid var(--border);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace
+}
+.bar{height:22px;border:1px solid var(--border);border-radius:6px;background:var(--panel2);overflow:hidden;position:relative}
+.bar > i{display:block;height:100%;background:var(--c-pow);width:0}
+.bar > span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700}
+.steps{counter-reset:s;margin:0;padding:0;list-style:none}
+.steps li{border:1px solid var(--border);border-radius:10px;padding:12px;margin:10px 0;background:var(--panel2)}
+.steps li.done{border-color:var(--ok)}
+.steps li[hidden]{display:none}
+.stepno{font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+mark{background:transparent;color:var(--c-max);font-weight:700}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--panel2);padding:1px 5px;border-radius:5px;font-size:.92em}
+.kbd-hint{font-size:.84rem;color:var(--muted);margin-top:6px}
+.badge{display:inline-block;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
+footer{color:var(--muted);font-size:.88rem;margin-top:26px;text-align:center}
+.toolbar{display:flex;gap:8px;align-items:center}
+hr.sep{border:none;border-top:1px solid var(--border);margin:18px 0}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>Wartości przebiegu sinusoidalnego i PEP</h1>
+    <p class="sub">Egzamin krótkofalarski klasa A · zobacz szczyty, zamiast zapamiętywać wzór.<br>
+    Decybele (10·log dla mocy, 20·log dla napięć) mają osobny explorable — tu ich nie ruszamy.</p>
+  </div>
+  <div class="toolbar">
+    <button class="btn small" id="theme" aria-label="Przełącz motyw jasny/ciemny">◐ motyw</button>
+  </div>
+</header>
+
+<!-- ============ S0 · BRAMKA PREDYKCJI ============ -->
+<section id="s0">
+  <h2>0 · Zanim cokolwiek zobaczysz <span class="tag">zgadnij i zapisz</span></h2>
+  <p class="lede">Nic się nie odsłoni, dopóki nie postawisz liczby. Zła odpowiedź jest tu warta więcej niż brak odpowiedzi — porównamy je na końcu.</p>
+  <div class="body">
+    <div class="gate">
+      <div class="q">Oscyloskop podpięty do wyjścia nadajnika pokazuje czystą sinusoidę o wartości <strong>szczytowej 100 V</strong>. Obciążenie: <strong>50 Ω</strong>. Ile wynosi moc <strong>PEP</strong>?</div>
+      <label class="note" for="g0">Twoja odpowiedź w watach (sama liczba):</label><br>
+      <input type="text" id="g0" inputmode="decimal" placeholder="np. 75" aria-describedby="g0h">
+      <button class="btn primary" id="g0b">Zatwierdzam</button>
+      <div class="note" id="g0h" style="margin-top:6px">Strzelaj z głowy. Werdykt dostaniesz w sekcji 4, nie teraz.</div>
+      <div class="reveal" id="g0r"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ S1 · WORKED DRIVE ============ -->
+<section id="s1" class="locked">
+  <h2>1 · Przykład prowadzony: 678 V z ekranu <span class="tag">krok po kroku</span></h2>
+  <p class="lede">Najpierw przejeżdżamy razem przez egzaminacyjny przykład. Ty typujesz, co będzie dalej; sinusoida dorysowuje kolejny znacznik dopiero po twoim strzale.</p>
+  <div class="body">
+    <canvas id="cv1" data-h="250" role="img" aria-label="Oscyloskop: sinusoida z dorysowywanymi znacznikami wartości międzyszczytowej, szczytowej i skutecznej"></canvas>
+    <ol class="steps" id="steps1">
+      <li id="st1">
+        <div class="stepno">Krok 1 / 3</div>
+        <p><strong>Na ekranie</strong>: od najniższego dołka do najwyższego szczytu jest <strong>678 V</strong>. To wartość <em>międzyszczytowa</em> (peak-to-peak) — cała wysokość przebiegu.<br>
+        Co będzie dalej: ile wynosi <strong>amplituda U<sub>max</sub></strong>?</p>
+        <input type="text" id="a1" inputmode="decimal" placeholder="wolty">
+        <button class="btn primary" id="b1">Sprawdź</button>
+        <div class="reveal" id="r1"></div>
+      </li>
+      <li id="st2" hidden>
+        <div class="stepno">Krok 2 / 3</div>
+        <p>Mamy <strong>U<sub>max</sub> = 339 V</strong>. Multimetr na tym samym sygnale pokaże wartość <strong>skuteczną</strong>.<br>
+        Co będzie dalej: ile wynosi <strong>U<sub>sk</sub></strong>?</p>
+        <input type="text" id="a2" inputmode="decimal" placeholder="wolty">
+        <button class="btn primary" id="b2">Sprawdź</button>
+        <div class="reveal" id="r2"></div>
+      </li>
+      <li id="st3" hidden>
+        <div class="stepno">Krok 3 / 3 — pułapka</div>
+        <p>Gdybyś podzielił 339 V przez <strong>2</strong> zamiast przez <strong>√2</strong>, dostałbyś 169,5 V. Napisz jednym zdaniem: <strong>dlaczego wartość skuteczna leży wyżej niż połowa amplitudy?</strong> (strzelaj, nawet jeśli nie jesteś pewien — odsłonię po wysłaniu)</p>
+        <textarea id="a3" placeholder="Bo…"></textarea>
+        <button class="btn primary" id="b3">Wyślij i odsłoń</button>
+        <div class="reveal" id="r3"></div>
+      </li>
+    </ol>
+    <p id="s1done" hidden><button class="btn primary" id="b1next">Dalej — teraz ty ruszasz suwakiem</button></p>
+  </div>
+</section>
+
+<!-- ============ S2 · SWOBODNA MANIPULACJA ============ -->
+<section id="s2" class="locked">
+  <h2>2 · Trzy wartości na jednym przebiegu <span class="tag">model manipulowalny</span></h2>
+  <p class="lede">Jedna sinusoida, trzy jednocześnie widoczne znaczniki. Przed dotknięciem suwaka — jeden strzał.</p>
+  <div class="body">
+    <div class="gate" id="p2gate">
+      <div class="q">Przewidywanie przed pierwszym dotknięciem: jeśli przesuniesz amplitudę <strong>z 100 V na 200 V</strong>, to wartość skuteczna wzrośnie <strong>ile razy</strong>?</div>
+      <input type="text" id="p2" inputmode="decimal" placeholder="np. 1,41">
+      <button class="btn primary" id="p2b">Zatwierdzam — odblokuj suwak</button>
+      <div class="reveal" id="p2r"></div>
+    </div>
+
+    <div id="s2body" hidden>
+      <canvas id="cv2" data-h="290" role="img" aria-label="Oscyloskop: sinusoida ze znacznikami U_max, U_międzyszczytowe i U_skuteczne"></canvas>
+      <div class="ctrls">
+        <div class="ctrl">
+          <label for="amp">Amplituda U<sub>max</sub> — <span id="ampv">100</span> V (strzałki na klawiaturze działają)</label>
+          <input type="range" id="amp" min="10" max="400" step="1" value="100">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn small" id="pre339">Egzamin: 678 V<sub>pp</sub></button>
+          <button class="btn small" id="pre100">100 V szczytowe</button>
+          <button class="btn small" id="halfT" aria-pressed="false">Pokaż U<sub>max</sub>/2 (błędna intuicja)</button>
+        </div>
+      </div>
+      <div class="readouts">
+        <div class="ro pp"><span class="k">U międzyszczytowe = 2·U<sub>max</sub></span><span class="v" id="vpp">200 V</span></div>
+        <div class="ro max"><span class="k">U<sub>max</sub> (amplituda)</span><span class="v" id="vmax">100 V</span></div>
+        <div class="ro rms"><span class="k">U skuteczne = U<sub>max</sub>/√2</span><span class="v" id="vrms">70,7 V</span></div>
+        <div class="ro"><span class="k">U<sub>sk</sub> / U<sub>max</sub></span><span class="v" id="vratio">0,707</span></div>
+      </div>
+      <p class="note">Kolejność, w której najłatwiej się pomylić: z ekranu (pp) <strong>najpierw dziel przez 2</strong> → amplituda, <strong>potem przez √2</strong> → skuteczna. Nigdy odwrotnie i nigdy jednym dzieleniem przez 2.</p>
+
+      <div class="gate" id="se2" hidden>
+        <div class="q">Samowyjaśnienie: wszystkie trzy liczby rosną razem z suwakiem, ale <strong>ich stosunki stoją w miejscu</strong>. Dlaczego? Jedno zdanie.</div>
+        <textarea id="se2a" placeholder="Bo…"></textarea>
+        <button class="btn primary" id="se2b">Wyślij i porównaj</button>
+        <div class="reveal" id="se2r"></div>
+      </div>
+      <p id="s2next" hidden><button class="btn primary" id="b2next">Dalej — dlaczego akurat √2</button></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ S3 · DLACZEGO √2 ============ -->
+<section id="s3" class="locked">
+  <h2>3 · Dlaczego √2, a nie 2 <span class="tag">sedno</span></h2>
+  <p class="lede">Wartość skuteczna nie jest „średnią z sinusa”. To <strong>napięcie stałe, które grzeje rezystor tak samo</strong>. Skoro chodzi o grzanie, patrzymy na moc chwilową <code>p(t) = u(t)²/R</code> — a kwadrat zmienia wszystko.</p>
+  <div class="body">
+    <div class="gate" id="p3gate">
+      <div class="q">Przewidywanie: ile <strong>procent U<sub>max</sub></strong> musi mieć napięcie stałe, żeby wydzieliło w tym samym rezystorze <strong>tę samą moc średnią</strong> co sinusoida?</div>
+      <input type="text" id="p3" inputmode="decimal" placeholder="np. 50">
+      <button class="btn primary" id="p3b">Zatwierdzam — odblokuj przeciąganie</button>
+      <div class="reveal" id="p3r"></div>
+    </div>
+
+    <div id="s3body" hidden>
+      <canvas id="cv3" data-h="360" role="img" aria-label="Górny wykres: sinusoida i przeciągalny poziom napięcia stałego. Dolny wykres: moc chwilowa sinusoidy z zacieniowanym polem, jej moc średnia i moc stała z napięcia stałego"></canvas>
+      <div class="ctrls">
+        <div class="ctrl">
+          <label for="dc">Napięcie stałe U<sub>DC</sub> — <span id="dcv">50,0</span> % amplitudy (przeciągnij na górnym wykresie albo użyj strzałek)</label>
+          <input type="range" id="dc" min="0" max="100" step="0.1" value="50">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn small" id="dc50">Ustaw 50 %</button>
+          <button class="btn small" id="dc707">Ustaw 70,7 %</button>
+        </div>
+      </div>
+      <div class="readouts">
+        <div class="ro pow"><span class="k">Moc średnia sinusoidy = U<sub>max</sub>²/(2R)</span><span class="v" id="pavg">—</span></div>
+        <div class="ro dc"><span class="k">Moc z napięcia stałego = U<sub>DC</sub>²/R</span><span class="v" id="pdc">—</span></div>
+        <div class="ro"><span class="k">Werdykt</span><span class="v" id="pverdict">—</span></div>
+      </div>
+      <p class="note">R = 50 Ω, U<sub>max</sub> = 339 V. Zauważ, co robi kwadrat: przy 50 % amplitudy moc stała to <strong>25 %</strong> mocy szczytowej, a sinusoida średnio daje <strong>50 %</strong>. Dopiero 70,7 % podniesione do kwadratu daje 50 %. <mark>√2 bierze się stąd, że wyrównujesz <em>kwadraty</em>, nie napięcia.</mark></p>
+
+      <div class="gate">
+        <div class="q">Samowyjaśnienie: dlaczego pole pod krzywą mocy sinusoidy zrównuje się z prostokątem mocy stałej dopiero przy 70,7 %, a nie przy 50 %?</div>
+        <textarea id="se3a" placeholder="Bo…"></textarea>
+        <button class="btn primary" id="se3b">Wyślij i porównaj</button>
+        <div class="reveal" id="se3r"></div>
+      </div>
+
+      <hr class="sep">
+      <div class="gate">
+        <div class="q">🔁 Pytanie odtworzeniowe 1 (z pamięci, bez zaglądania wyżej)</div>
+        <p><strong>Dlaczego wartość skuteczna sinusoidy to U<sub>max</sub>/√2, a nie U<sub>max</sub>/2? Odpowiedz przez moc, nie przez wzór.</strong></p>
+        <textarea id="q1" placeholder="Pisz z głowy — cokolwiek. Odsłonię dopiero po wysłaniu."></textarea>
+        <button class="btn primary" id="q1b">Wyślij i porównaj</button>
+        <div class="reveal" id="q1r">
+          <p><strong>Wzorzec odpowiedzi:</strong> wartość skuteczna definiuje się przez <em>grzanie</em>: to takie napięcie stałe, które w tym samym rezystorze wydziela tę samą moc średnią. Moc idzie z kwadratu napięcia (<code>p = u²/R</code>), a średnia z <code>sin²</code> po okresie wynosi ½. Zatem U<sub>sk</sub>² = ½·U<sub>max</sub>², czyli U<sub>sk</sub> = U<sub>max</sub>/√2 ≈ 0,707·U<sub>max</sub>. Połowa amplitudy dałaby tylko ćwiartkę mocy szczytowej — o połowę za mało.</p>
+        </div>
+      </div>
+      <p><button class="btn primary" id="b3next">Dalej — PEP na 50 Ω</button></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ S4 · PEP ============ -->
+<section id="s4" class="locked">
+  <h2>4 · PEP na obciążeniu 50 Ω <span class="tag">dwie drogi, jedna liczba</span></h2>
+  <p class="lede">PEP = moc szczytowa obwiedni: moc, jaką sygnał daje w chwili największego wychylenia. Liczysz ją z <strong>napięcia szczytowego</strong> na obciążeniu — dwiema drogami, które muszą się zgodzić co do wata.</p>
+  <div class="body">
+    <div class="ctrls">
+      <div class="ctrl">
+        <label for="up">Napięcie szczytowe U<sub>max</sub> na obciążeniu — <span id="upv">100</span> V (R = 50 Ω)</label>
+        <input type="range" id="up" min="10" max="250" step="1" value="100">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn small" id="upre">Przypadek egzaminacyjny: 100 V</button>
+      </div>
+    </div>
+    <canvas id="cv4" data-h="200" role="img" aria-label="Sinusoida na obciążeniu 50 om z zaznaczonym napięciem szczytowym i skutecznym"></canvas>
+
+    <div class="routes">
+      <div class="route ok">
+        <h3>Droga A — prosto z amplitudy</h3>
+        <div class="step">P = U<sub>max</sub>² / (2·R)</div>
+        <div class="step" id="rA1">= 100² / (2 · 50)</div>
+        <div class="step" id="rA2">= <strong>100,0 W</strong></div>
+      </div>
+      <div class="route ok">
+        <h3>Droga B — przez wartość skuteczną</h3>
+        <div class="step" id="rB1">U<sub>sk</sub> = 100 / √2 = 70,71 V</div>
+        <div class="step">P = U<sub>sk</sub>² / R</div>
+        <div class="step" id="rB2">= 70,71² / 50 = <strong>100,0 W</strong></div>
+      </div>
+    </div>
+    <div class="eq">(U<sub>max</sub>/√2)² / R  =  U<sub>max</sub>² / (2R) &nbsp; — &nbsp; <mark>dwójka w mianowniku TO JEST √2 podniesione do kwadratu</mark></div>
+
+    <p><strong>Te same dane, drogi które dają zły wynik</strong> — obie żyją na tym samym suwaku, więc widać, o ile chybiają:</p>
+    <div class="routes">
+      <div class="route err">
+        <h3>❌ „szczytowe na pół to nominalne”</h3>
+        <div class="step" id="rW1">(100/2)² / 50 = <strong>50,0 W</strong></div>
+        <div class="step note" id="rW1b">= dokładnie <strong>połowa</strong> prawdziwej mocy — zawsze, przy każdej amplitudzie. Dzielenie przez 2 zamiast przez √2 gubi czynnik 2 w mocy.</div>
+      </div>
+      <div class="route err">
+        <h3>❌ wstawione U<sub>pp</sub> zamiast U<sub>max</sub></h3>
+        <div class="step" id="rW2">(2·100)² / (2·50) = <strong>400,0 W</strong></div>
+        <div class="step note">= <strong>4×</strong> za dużo. Odczyt z oscyloskopu „od dołka do szczytu” trzeba najpierw podzielić przez 2. To ta sama pomyłka co mylenie U<sub>pp</sub> z U<sub>sk</sub>, tylko w drugą stronę.</div>
+      </div>
+    </div>
+
+    <div class="reveal" id="verdict0" style="display:block"></div>
+
+    <hr class="sep">
+    <div class="gate">
+      <div class="q">🔁 Pytanie odtworzeniowe 2 (z pamięci)</div>
+      <p><strong>Oscyloskop pokazuje przebieg o wartości międzyszczytowej 200 V na obciążeniu 50 Ω. Wypisz z głowy całą drogę do PEP — każdy krok — i podaj wynik w watach.</strong></p>
+      <textarea id="q2" placeholder="Krok 1: …"></textarea>
+      <button class="btn primary" id="q2b">Wyślij i porównaj</button>
+      <div class="reveal" id="q2r">
+        <p><strong>Wzorzec odpowiedzi:</strong> (1) z ekranu mam U<sub>pp</sub> = 200 V; (2) U<sub>max</sub> = U<sub>pp</sub>/2 = 100 V; (3) PEP = U<sub>max</sub>²/(2R) = 10 000/100 = <strong>100 W</strong>. Kontrola drugą drogą: U<sub>sk</sub> = 100/√2 = 70,71 V → 70,71²/50 = 100 W. Zgadza się.</p>
+      </div>
+    </div>
+
+    <div class="gate">
+      <div class="q">🔁 Pytanie odtworzeniowe 3 — ogniwo „dlaczego” (węzeł: podstawy obwodów i moc)</div>
+      <p><strong>Skąd w ogóle bierze się P = U²/R? Wyprowadź to z prawa Ohma i z P = U·I — i powiedz, dlaczego moc rośnie z kwadratem napięcia, a nie liniowo.</strong></p>
+      <textarea id="q3" placeholder="Z prawa Ohma…"></textarea>
+      <button class="btn primary" id="q3b">Wyślij i porównaj</button>
+      <div class="reveal" id="q3r">
+        <p><strong>Wzorzec odpowiedzi:</strong> P = U·I, a prawo Ohma daje I = U/R. Podstawiam: P = U·(U/R) = U²/R. Podniesienie napięcia dwukrotnie podnosi <em>jednocześnie</em> prąd dwukrotnie, więc iloczyn rośnie czterokrotnie — stąd kwadrat. To ten sam kwadrat, który później wymusza √2 w wartości skutecznej i dwójkę we wzorze na PEP.</p>
+      </div>
+    </div>
+    <p><button class="btn primary" id="b4next">Dalej — dlaczego SSB nie grzeje zasilacza jak FM</button></p>
+  </div>
+</section>
+
+<!-- ============ S5 · SSB vs AM/FM ============ -->
+<section id="s5" class="locked">
+  <h2>5 · 100 W PEP w SSB ≠ 100 W ciągle <span class="tag">para kontrastowa</span></h2>
+  <p class="lede">PEP to szczyt obwiedni, nie moc średnia. W SSB nośnej nie ma — obwiednia idzie za mową i wraca do zera między sylabami. W AM/FM nośna stoi na pełnym poziomie cały czas.</p>
+  <div class="body">
+    <div class="gate" id="p5gate">
+      <div class="q">Przewidywanie: nadajnik dający <strong>100 W PEP</strong> w SSB, przy normalnej mowie — jaka jest jego <strong>moc średnia</strong> w watach?</div>
+      <input type="text" id="p5" inputmode="decimal" placeholder="np. 90">
+      <button class="btn primary" id="p5b">Zatwierdzam — pokaż obwiednię</button>
+      <div class="reveal" id="p5r"></div>
+    </div>
+    <div id="s5body" hidden>
+      <canvas id="cv5" data-h="230" role="img" aria-label="Obwiednia sygnału: tryb SSB z sylabami mowy albo tryb AM/FM ze stałą nośną, z zaznaczonym poziomem PEP i mocą średnią"></canvas>
+      <div class="ctrls">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn small" id="mSSB" aria-pressed="true">SSB (mowa)</button>
+          <button class="btn small" id="mFM" aria-pressed="false">AM/FM (nośna ciągła)</button>
+          <button class="btn small" id="expl5">Zatrzymaj i wyjaśnij</button>
+        </div>
+      </div>
+      <div class="readouts">
+        <div class="ro pow"><span class="k">PEP (szczyt obwiedni)</span><span class="v" id="pep5">100 W</span></div>
+        <div class="ro"><span class="k">Moc średnia</span><span class="v" id="pav5">—</span></div>
+        <div class="ro"><span class="k">Moc średnia / PEP (współczynnik wypełnienia)</span><span class="v" id="duty5">—</span></div>
+      </div>
+      <div class="bar" aria-hidden="true"><i id="bar5"></i><span id="bar5t"></span></div>
+      <div class="reveal" id="ex5">
+        <p><strong>Co widzisz:</strong> w SSB moc leci tylko wtedy, gdy leci głos, i tylko chwilami dotyka PEP. Moc średnia to zwykle rząd <strong>20–25 % PEP</strong> — dlatego zasilacz i radiator w transceiverze 100 W PEP nie muszą wyrabiać 100 W bez przerwy. W AM/FM obwiednia jest płaska: moc średnia = PEP, wypełnienie 100 %, i to trwa przez cały czas nadawania.</p>
+        <p><strong>Stąd zasada 50 % zapasu:</strong> ten sam wzmacniacz, który daje 100 W PEP w SSB, w trybie FM/AM (albo CW/RTTY z pełnym wypełnieniem) zwykle ogranicza się do <strong>ok. 50 W</strong> — bo tam „szczyt” to stan ciągły i to grzanie, nie chwila, wyznacza limit.</p>
+        <p class="note">Twoim językiem: PEP to <em>peak burst</em>, moc średnia to <em>sustained throughput</em>. Zasilacz wymiarujesz jak limity, nie jak requests — a tryb FM to obciążenie, w którym p99 równa się średniej.</p>
+      </div>
+      <p><button class="btn primary" id="b5next">Dalej — pusta kartka</button></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ S6 · PUSTA KARTKA ============ -->
+<section id="s6" class="locked">
+  <h2>6 · Pusta kartka <span class="tag">rekonstrukcja</span></h2>
+  <div class="body">
+    <p><strong>Zamknij albo zasłoń tę stronę.</strong> Na kartce (albo w polu niżej, ale bez przewijania w górę) odtwórz cały szkielet: <em>co widzisz na oscyloskopie → jak dojść do wartości skutecznej → jak dojść do PEP na 50 Ω → dlaczego SSB obciąża zasilacz inaczej niż FM</em>. Wypisz same ogniwa, nie zdania.</p>
+    <textarea id="q4" placeholder="1) Na ekranie widzę…" style="min-height:150px"></textarea>
+    <button class="btn primary" id="q4b">Wysyłam — pokaż szkielet do porównania</button>
+    <div class="reveal" id="q4r">
+      <ol>
+        <li>Z ekranu czytam <strong>U<sub>pp</sub></strong> — całą wysokość przebiegu.</li>
+        <li><strong>U<sub>max</sub> = U<sub>pp</sub>/2</strong> — amplituda, czyli szczyt względem zera.</li>
+        <li><strong>U<sub>sk</sub> = U<sub>max</sub>/√2 ≈ 0,707·U<sub>max</sub></strong> — bo skuteczna jest zdefiniowana przez równość mocy średniej, a moc idzie z kwadratu napięcia (średnia z sin² = ½).</li>
+        <li>Egzaminacyjny łańcuch: 678 V<sub>pp</sub> → 339 V szczytowo → 240 V skutecznie.</li>
+        <li><strong>PEP = U<sub>max</sub>²/(2R)</strong>, równoważnie <strong>U<sub>sk</sub>²/R</strong>; 100 V szczytowo na 50 Ω → <strong>100 W</strong>. Dwójka w mianowniku to (√2)².</li>
+        <li>Pułapki: dzielenie przez 2 zamiast √2 → wynik dwukrotnie za mały (50 W); wstawienie U<sub>pp</sub> zamiast U<sub>max</sub> → czterokrotnie za duży (400 W).</li>
+        <li><strong>PEP ≠ moc średnia.</strong> W SSB obwiednia idzie za mową → średnia rzędu 20–25 % PEP. W AM/FM nośna ciągła → średnia = PEP, stąd praca z ok. 50 % mocy PEP.</li>
+        <li>(Osobny explorable: te same stosunki w decybelach — 10·log dla mocy, 20·log dla napięć.)</li>
+      </ol>
+    </div>
+    <hr class="sep">
+    <p><strong>Powiedz Engramowi swoje odpowiedzi z pytań odtworzeniowych przy następnej rozmowie — staną się częścią twojego harmonogramu.</strong></p>
+    <p class="note">(Tell Engram your retrieval answers next time you talk — they become part of your schedule.) Chodzi o pytania 1, 2 i 3 oraz o pustą kartkę.</p>
+  </div>
+</section>
+
+<footer>Engram · węzeł <code>prad-zmienny-wartosci-i-decybel</code> · plik działa offline z dysku</footer>
+</div>
+
+<script>
+"use strict";
+(function(){
+const $ = function(id){ return document.getElementById(id); };
+const RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const CS = getComputedStyle(document.documentElement);
+function tok(n){ return CS.getPropertyValue(n).trim() || "#888"; }
+function num(s){
+  if(s==null) return NaN;
+  var t = String(s).replace(/\s/g,"").replace(",",".").replace(/[^0-9.\-]/g,"");
+  return t===""?NaN:parseFloat(t);
+}
+function fmt(v,d){ d = (d===undefined)?1:d; return v.toFixed(d).replace(".",","); }
+
+/* ---------- motyw ---------- */
+$("theme").addEventListener("click", function(){
+  var cur = document.documentElement.getAttribute("data-theme");
+  var dark = cur ? cur==="dark"
+                 : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", dark?"light":"dark");
+  redrawAll();
+});
+
+/* ---------- canvas helpers ---------- */
+function fit(cv){
+  var d = Math.min(2, window.devicePixelRatio || 1);
+  var w = Math.max(300, cv.clientWidth);
+  var h = parseFloat(cv.dataset.h);
+  cv.style.height = h + "px";
+  cv.width = Math.round(w*d); cv.height = Math.round(h*d);
+  var ctx = cv.getContext("2d");
+  ctx.setTransform(d,0,0,d,0,0);
+  return {ctx:ctx, W:w, H:h};
+}
+function chip(ctx,x,y,text,color,align){
+  ctx.font = "600 12px -apple-system,Segoe UI,Roboto,sans-serif";
+  var w = ctx.measureText(text).width + 12, h = 19;
+  var bx = (align==="right") ? x - w : x;
+  ctx.fillStyle = tok("--chip-bg");
+  ctx.strokeStyle = color; ctx.lineWidth = 1;
+  var r = 5, by = y - h/2;
+  ctx.beginPath();
+  ctx.moveTo(bx+r,by); ctx.lineTo(bx+w-r,by); ctx.quadraticCurveTo(bx+w,by,bx+w,by+r);
+  ctx.lineTo(bx+w,by+h-r); ctx.quadraticCurveTo(bx+w,by+h,bx+w-r,by+h);
+  ctx.lineTo(bx+r,by+h); ctx.quadraticCurveTo(bx,by+h,bx,by+h-r);
+  ctx.lineTo(bx,by+r); ctx.quadraticCurveTo(bx,by,bx+r,by); ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = color; ctx.textAlign="left"; ctx.textBaseline="middle";
+  ctx.fillText(text, bx+6, y+0.5);
+}
+function grid(ctx,x0,y0,x1,y1){
+  ctx.strokeStyle = tok("--grid"); ctx.lineWidth = 1;
+  var i;
+  for(i=0;i<=10;i++){ var x = x0 + (x1-x0)*i/10;
+    ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x,y1); ctx.stroke(); }
+  for(i=0;i<=8;i++){ var y = y0 + (y1-y0)*i/8;
+    ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke(); }
+}
+function dash(ctx,x0,y,x1,color,pat){
+  ctx.save(); ctx.setLineDash(pat||[6,5]); ctx.strokeStyle=color; ctx.lineWidth=1.6;
+  ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke(); ctx.restore();
+}
+
+/* ============================================================
+   SCOPE — sinusoida ze znacznikami (sekcje 1, 2, 4)
+   opts: {A, FS, showMax, showPP, showRMS, showHalf, cycles}
+   ============================================================ */
+function drawScope(cv, o){
+  var f = fit(cv), ctx = f.ctx, W = f.W, H = f.H;
+  var L = 14, Rm = 128, T = 16, B = 20;
+  var x0 = L, x1 = W - Rm, y0 = T, y1 = H - B, cy = (y0+y1)/2;
+  var half = (y1-y0)/2 - 8;
+  var FS = o.FS, A = o.A;
+  var vy = function(v){ return cy - v/FS*half; };
+
+  ctx.clearRect(0,0,W,H);
+  grid(ctx,x0,y0,x1,y1);
+  ctx.strokeStyle = tok("--axis"); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(x0,cy); ctx.lineTo(x1,cy); ctx.stroke();
+
+  var cycles = o.cycles || 2;
+  ctx.strokeStyle = tok("--trace"); ctx.lineWidth = 2.2; ctx.beginPath();
+  for(var px=x0; px<=x1; px+=1){
+    var t = (px-x0)/(x1-x0);
+    var v = A*Math.sin(2*Math.PI*cycles*t);
+    if(px===x0) ctx.moveTo(px,vy(v)); else ctx.lineTo(px,vy(v));
+  }
+  ctx.stroke();
+
+  if(o.showHalf){
+    dash(ctx,x0,vy(A/2),x1,tok("--c-bad"),[2,4]);
+    chip(ctx,x1+6,vy(A/2),"U_max/2 = "+fmt(A/2)+" V ✗",tok("--c-bad"),"left");
+  }
+  if(o.showRMS){
+    dash(ctx,x0,vy(A/Math.SQRT2),x1,tok("--c-rms"));
+    chip(ctx,x1+6,vy(A/Math.SQRT2),"U_sk = "+fmt(A/Math.SQRT2)+" V",tok("--c-rms"),"left");
+  }
+  if(o.showMax){
+    dash(ctx,x0,vy(A),x1,tok("--c-max"));
+    chip(ctx,x1+6,vy(A),"U_max = "+fmt(A)+" V",tok("--c-max"),"left");
+  }
+  if(o.showPP){
+    dash(ctx,x0,vy(-A),x1,tok("--c-pp"),[3,4]);
+    var ax = x0 + (x1-x0)*0.80;
+    ctx.strokeStyle = tok("--c-pp"); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(ax,vy(A)); ctx.lineTo(ax,vy(-A)); ctx.stroke();
+    [[vy(A),1],[vy(-A),-1]].forEach(function(p){
+      ctx.beginPath(); ctx.moveTo(ax,p[0]); ctx.lineTo(ax-5,p[0]+7*p[1]);
+      ctx.lineTo(ax+5,p[0]+7*p[1]); ctx.closePath();
+      ctx.fillStyle = tok("--c-pp"); ctx.fill();
+    });
+    chip(ctx,ax-8,cy,"U_pp = "+fmt(2*A)+" V",tok("--c-pp"),"right");
+  }
+}
+
+/* ============================================================
+   S1 — worked drive
+   ============================================================ */
+var st1 = {A:339, FS:400, showMax:false, showPP:true, showRMS:false, showHalf:false};
+function draw1(){ drawScope($("cv1"), st1); }
+
+/* ============================================================
+   S2 — swobodna manipulacja
+   ============================================================ */
+var st2 = {A:100, FS:400, showMax:true, showPP:true, showRMS:true, showHalf:false};
+function draw2(){
+  drawScope($("cv2"), st2);
+  $("vmax").textContent = fmt(st2.A) + " V";
+  $("vpp").textContent  = fmt(2*st2.A) + " V";
+  $("vrms").textContent = fmt(st2.A/Math.SQRT2) + " V";
+  $("vratio").textContent = "0,707";
+  $("ampv").textContent = Math.round(st2.A);
+}
+
+/* ============================================================
+   S3 — moc chwilowa i poziom DC
+   ============================================================ */
+var st3 = {A:339, R:50, frac:0.5};
+function draw3(){
+  var cv = $("cv3"), f = fit(cv), ctx = f.ctx, W = f.W, H = f.H;
+  var L = 14, Rm = 150, T = 14, B = 16;
+  var x0 = L, x1 = W - Rm;
+  var gap = 26;
+  var hTop = (H - T - B - gap) * 0.46;
+  var tY0 = T, tY1 = T + hTop;
+  var bY0 = tY1 + gap, bY1 = H - B;
+  var cy = (tY0+tY1)/2, half = hTop/2 - 6;
+  var A = st3.A, R = st3.R, Udc = st3.frac*A;
+  var vy = function(v){ return cy - v/A*half; };
+  var pMax = A*A/R, pScale = pMax*1.14;
+  var py = function(p){ return bY1 - p/pScale*(bY1-bY0); };
+  var cycles = 2;
+
+  ctx.clearRect(0,0,W,H);
+
+  /* --- górny panel: napięcie --- */
+  grid(ctx,x0,tY0,x1,tY1);
+  ctx.strokeStyle = tok("--axis"); ctx.lineWidth=1.1;
+  ctx.beginPath(); ctx.moveTo(x0,cy); ctx.lineTo(x1,cy); ctx.stroke();
+  ctx.strokeStyle = tok("--trace"); ctx.lineWidth=2.1; ctx.beginPath();
+  for(var px=x0;px<=x1;px+=1){
+    var t=(px-x0)/(x1-x0); var v=A*Math.sin(2*Math.PI*cycles*t);
+    if(px===x0) ctx.moveTo(px,vy(v)); else ctx.lineTo(px,vy(v));
+  }
+  ctx.stroke();
+  dash(ctx,x0,vy(A),x1,tok("--c-max"),[3,5]);
+  chip(ctx,x1+6,vy(A),"U_max "+fmt(A,0)+" V",tok("--c-max"),"left");
+  ctx.strokeStyle = tok("--c-dc"); ctx.lineWidth=2.6;
+  ctx.beginPath(); ctx.moveTo(x0,vy(Udc)); ctx.lineTo(x1,vy(Udc)); ctx.stroke();
+  chip(ctx,x1+6,vy(Udc),"U_DC "+fmt(Udc,0)+" V ("+fmt(st3.frac*100)+" %)",tok("--c-dc"),"left");
+  ctx.fillStyle = tok("--muted");
+  ctx.font = "600 11px -apple-system,Segoe UI,Roboto,sans-serif";
+  ctx.textAlign="left"; ctx.textBaseline="top";
+  ctx.fillText("napięcie u(t) — przeciągnij niebieską linię", x0+4, tY0+3);
+
+  /* --- dolny panel: moc chwilowa --- */
+  grid(ctx,x0,bY0,x1,bY1);
+  ctx.beginPath(); ctx.moveTo(x0,py(0));
+  for(var px2=x0;px2<=x1;px2+=1){
+    var t2=(px2-x0)/(x1-x0);
+    var u=A*Math.sin(2*Math.PI*cycles*t2);
+    ctx.lineTo(px2,py(u*u/R));
+  }
+  ctx.lineTo(x1,py(0)); ctx.closePath();
+  ctx.fillStyle = tok("--c-pow-fill"); ctx.fill();
+  ctx.strokeStyle = tok("--c-pow"); ctx.lineWidth=2; ctx.beginPath();
+  for(var px3=x0;px3<=x1;px3+=1){
+    var t3=(px3-x0)/(x1-x0);
+    var u3=A*Math.sin(2*Math.PI*cycles*t3);
+    if(px3===x0) ctx.moveTo(px3,py(u3*u3/R)); else ctx.lineTo(px3,py(u3*u3/R));
+  }
+  ctx.stroke();
+
+  var Pavg = A*A/(2*R), Pdc = Udc*Udc/R;
+  var match = Math.abs(Pdc-Pavg) < 0.012*Pavg;
+
+  /* prostokąt mocy stałej */
+  ctx.fillStyle = tok("--c-dc-fill");
+  ctx.fillRect(x0, py(Pdc), x1-x0, py(0)-py(Pdc));
+  dash(ctx,x0,py(Pavg),x1,tok("--c-pow"),[7,5]);
+  chip(ctx,x1+6,py(Pavg),"P_śr sinusa "+fmt(Pavg/1000,2)+" kW",tok("--c-pow"),"left");
+  ctx.strokeStyle = tok("--c-dc"); ctx.lineWidth = match?3.4:2.4;
+  ctx.beginPath(); ctx.moveTo(x0,py(Pdc)); ctx.lineTo(x1,py(Pdc)); ctx.stroke();
+  chip(ctx,x1+6,py(Pdc)+(match?18:0),"P z U_DC "+fmt(Pdc/1000,2)+" kW",tok("--c-dc"),"left");
+  ctx.fillStyle = tok("--muted");
+  ctx.font = "600 11px -apple-system,Segoe UI,Roboto,sans-serif";
+  ctx.textAlign="left"; ctx.textBaseline="top";
+  ctx.fillText("moc chwilowa p(t) = u(t)²/R — pole = energia", x0+4, bY0+3);
+  if(match){
+    chip(ctx,(x0+x1)/2-70,bY0-13,"TA SAMA MOC ŚREDNIA — pola równe",tok("--ok"),"left");
+  }
+
+  /* readouty */
+  $("pavg").textContent = fmt(Pavg,0)+" W";
+  $("pdc").textContent  = fmt(Pdc,0)+" W";
+  $("dcv").textContent  = fmt(st3.frac*100);
+  var vd = $("pverdict");
+  if(match){ vd.textContent = "równe ✓"; vd.style.color = tok("--ok"); }
+  else if(Pdc<Pavg){ vd.textContent = fmt(Pdc/Pavg*100,0)+" % za mało"; vd.style.color = tok("--c-bad"); }
+  else { vd.textContent = "+"+fmt((Pdc/Pavg-1)*100,0)+" % za dużo"; vd.style.color = tok("--c-bad"); }
+}
+
+/* ============================================================
+   S4 — PEP
+   ============================================================ */
+var st4 = {A:100, R:50};
+function draw4(){
+  drawScope($("cv4"), {A:st4.A, FS:250, showMax:true, showPP:false, showRMS:true, showHalf:false, cycles:2});
+  var A = st4.A, R = st4.R;
+  var P = A*A/(2*R), Urms = A/Math.SQRT2, Pb = Urms*Urms/R;
+  $("upv").textContent = Math.round(A);
+  $("rA1").innerHTML = "= "+fmt(A,0)+"² / (2 · "+R+")";
+  $("rA2").innerHTML = "= <strong>"+fmt(P,1)+" W</strong>";
+  $("rB1").innerHTML = "U<sub>sk</sub> = "+fmt(A,0)+" / √2 = "+fmt(Urms,2)+" V";
+  $("rB2").innerHTML = "= "+fmt(Urms,2)+"² / "+R+" = <strong>"+fmt(Pb,1)+" W</strong>";
+  $("rW1").innerHTML = "("+fmt(A,0)+"/2)² / "+R+" = <strong>"+fmt((A/2)*(A/2)/R,1)+" W</strong>";
+  $("rW2").innerHTML = "(2·"+fmt(A,0)+")² / (2·"+R+") = <strong>"+fmt((2*A)*(2*A)/(2*R),1)+" W</strong>";
+}
+
+/* ============================================================
+   S5 — obwiednia SSB vs AM/FM
+   ============================================================ */
+var ENV_N = 720, env = new Float64Array(ENV_N);
+(function buildEnv(){
+  var syl = [
+    [0.05,0.0216,0.55],[0.10,0.0187,0.80],[0.145,0.0158,0.42],
+    [0.24,0.0216,1.00],[0.29,0.0173,0.62],
+    [0.40,0.0202,0.72],[0.445,0.0144,0.35],
+    [0.56,0.0187,0.90],[0.605,0.0216,0.55],[0.655,0.0144,0.30],
+    [0.78,0.0216,0.66],[0.825,0.0158,0.88],[0.87,0.0187,0.40]
+  ];
+  var i,j,mx=0;
+  for(i=0;i<ENV_N;i++){
+    var t=i/ENV_N, s=0;
+    for(j=0;j<syl.length;j++){
+      var d=t-syl[j][0];
+      if(d>0.5) d-=1; if(d<-0.5) d+=1;
+      s += syl[j][2]*Math.exp(-(d*d)/(2*syl[j][1]*syl[j][1]));
+    }
+    env[i]=s; if(s>mx) mx=s;
+  }
+  for(i=0;i<ENV_N;i++) env[i]/=mx;
+})();
+var st5 = {mode:"ssb", off:0, run:!RM, PEP:100};
+function envAvgFrac(){
+  if(st5.mode==="fm") return 1;
+  var s=0; for(var i=0;i<ENV_N;i++) s+=env[i]*env[i];
+  return s/ENV_N;
+}
+function draw5(){
+  var cv=$("cv5"), f=fit(cv), ctx=f.ctx, W=f.W, H=f.H;
+  var L=14, Rm=96, T=16, B=18;
+  var x0=L,x1=W-Rm,y0=T,y1=H-B,cy=(y0+y1)/2, half=(y1-y0)/2-8;
+  ctx.clearRect(0,0,W,H);
+  grid(ctx,x0,y0,x1,y1);
+  ctx.strokeStyle=tok("--axis"); ctx.lineWidth=1.1;
+  ctx.beginPath(); ctx.moveTo(x0,cy); ctx.lineTo(x1,cy); ctx.stroke();
+
+  var N=x1-x0, e=new Float64Array(Math.max(1,Math.floor(N))+1), i;
+  for(i=0;i<=N;i++){
+    if(st5.mode==="fm") e[i]=1;
+    else{
+      var idx=Math.floor((i/N)*ENV_N + st5.off) % ENV_N;
+      if(idx<0) idx+=ENV_N;
+      e[i]=env[idx];
+    }
+  }
+  /* wypełnienie obwiedni (RF w środku) */
+  ctx.beginPath(); ctx.moveTo(x0,cy);
+  for(i=0;i<=N;i++) ctx.lineTo(x0+i, cy - e[i]*half);
+  for(i=N;i>=0;i--) ctx.lineTo(x0+i, cy + e[i]*half);
+  ctx.closePath();
+  ctx.fillStyle=tok("--c-pow-fill"); ctx.fill();
+  ctx.strokeStyle=tok("--c-pow"); ctx.lineWidth=2;
+  ctx.beginPath();
+  for(i=0;i<=N;i++){ var yy=cy-e[i]*half; if(i===0) ctx.moveTo(x0,yy); else ctx.lineTo(x0+i,yy); }
+  ctx.stroke();
+  ctx.beginPath();
+  for(i=0;i<=N;i++){ var yy2=cy+e[i]*half; if(i===0) ctx.moveTo(x0,yy2); else ctx.lineTo(x0+i,yy2); }
+  ctx.stroke();
+
+  dash(ctx,x0,cy-half,x1,tok("--c-max"),[6,5]);
+  chip(ctx,x1+6,cy-half,"PEP 100 W",tok("--c-max"),"left");
+  var frac=envAvgFrac();
+  /* poziom napięciowy odpowiadający mocy średniej: sqrt(frac) */
+  var yavg = cy - Math.sqrt(frac)*half;
+  dash(ctx,x0,yavg,x1,tok("--c-dc"),[3,4]);
+  chip(ctx,x1+6,yavg,"P_śr "+fmt(frac*100,0)+" W",tok("--c-dc"),"left");
+  ctx.fillStyle=tok("--muted"); ctx.font="600 11px -apple-system,Segoe UI,Roboto,sans-serif";
+  ctx.textAlign="left"; ctx.textBaseline="top";
+  ctx.fillText(st5.mode==="fm" ? "AM/FM: nośna stoi na pełnym poziomie bez przerwy"
+                               : "SSB: obwiednia idzie za mową, między sylabami spada do zera",
+               x0+4, y0+3);
+
+  $("pav5").textContent = fmt(frac*100,0)+" W";
+  $("duty5").textContent = fmt(frac*100,0)+" %";
+  var b=$("bar5"); b.style.width=(frac*100)+"%";
+  $("bar5t").textContent = "moc średnia = "+fmt(frac*100,0)+" % PEP";
+}
+var raf=null;
+function loop5(){
+  if(!st5.run) return;
+  st5.off = (st5.off + 1.6) % ENV_N;
+  draw5();
+  raf = requestAnimationFrame(loop5);
+}
+
+/* ============================================================
+   REDRAW / RESIZE
+   ============================================================ */
+function redrawAll(){
+  if(!$("s1").classList.contains("locked")) draw1();
+  if($("s2body") && !$("s2body").hidden) draw2();
+  if($("s3body") && !$("s3body").hidden) draw3();
+  if(!$("s4").classList.contains("locked")) draw4();
+  if($("s5body") && !$("s5body").hidden) draw5();
+}
+var rt=null;
+window.addEventListener("resize", function(){
+  clearTimeout(rt); rt=setTimeout(redrawAll,120);
+});
+
+/* ============================================================
+   BRAMKI / ODSŁANIANIE
+   ============================================================ */
+function unlock(id){
+  var s=$(id); s.classList.remove("locked");
+  s.scrollIntoView({behavior: RM?"auto":"smooth", block:"start"});
+}
+function showRev(id, html, cls){
+  var r=$(id); r.innerHTML=html;
+  r.className = "reveal show" + (cls?(" "+cls):"");
+}
+
+/* --- S0 --- */
+var guess0 = null;
+$("g0b").addEventListener("click", function(){
+  var v = num($("g0").value);
+  if(isNaN(v)){ showRev("g0r","Wpisz jakąkolwiek liczbę — nawet zgadywaną. Bez zobowiązania nie ma odsłonięcia.","warn"); return; }
+  guess0 = v;
+  showRev("g0r","Zapisane: <strong>"+fmt(v,0)+" W</strong>. Odkładam to na później — wrócimy do tej liczby w sekcji 4, kiedy będziesz miał czym ją sprawdzić.");
+  $("g0b").disabled = true; $("g0").disabled = true;
+  unlock("s1"); draw1();
+});
+
+/* --- S1 worked drive --- */
+$("b1").addEventListener("click", function(){
+  var v=num($("a1").value);
+  if(isNaN(v)){ showRev("r1","Postaw liczbę, choćby zgadywaną.","warn"); return; }
+  st1.showMax=true; draw1();
+  if(Math.abs(v-339)<6){
+    showRev("r1","Tak: <strong>U<sub>max</sub> = 678/2 = 339 V</strong>. Amplituda to <em>połowa</em> wysokości przebiegu — pomarańczowa linia dorysowana.");
+  } else {
+    showRev("r1","Wpisałeś "+fmt(v,0)+" V. Poprawnie: <strong>678/2 = 339 V</strong>. Międzyszczytowa mierzy dołek-szczyt, amplituda mierzy zero-szczyt, więc dzielisz przez 2. To jedyne miejsce, gdzie dzieli się przez 2.","warn");
+  }
+  $("st1").classList.add("done"); $("st2").hidden=false; $("a2").focus();
+});
+$("b2").addEventListener("click", function(){
+  var v=num($("a2").value);
+  if(isNaN(v)){ showRev("r2","Postaw liczbę.","warn"); return; }
+  st1.showRMS=true; draw1();
+  if(Math.abs(v-240)<8){
+    showRev("r2","Tak: <strong>339/√2 = 239,7 ≈ 240 V</strong>. Teraz widzisz na ekranie wszystkie trzy poziomy naraz: 678 pp / 339 szczytowo / 240 skutecznie.");
+  } else if(Math.abs(v-169.5)<10){
+    showRev("r2","Wpisałeś "+fmt(v,0)+" V — to 339<strong>/2</strong>, czyli dokładnie ta pułapka. Poprawnie: <strong>339/√2 = 240 V</strong>. Dziel przez 1,41, nie przez 2.","bad");
+  } else {
+    showRev("r2","Wpisałeś "+fmt(v,0)+" V. Poprawnie: <strong>339/√2 = 240 V</strong> (0,707·339).","warn");
+  }
+  $("st2").classList.add("done"); $("st3").hidden=false; $("a3").focus();
+});
+$("b3").addEventListener("click", function(){
+  if($("a3").value.trim().length<3){ showRev("r3","Napisz cokolwiek — jedno zdanie wystarczy. Próba jest warunkiem odsłonięcia.","warn"); return; }
+  st1.showHalf=true; draw1();
+  showRev("r3","<p>Czerwona kropkowana linia to U<sub>max</sub>/2 — widać, że leży wyraźnie <em>niżej</em> niż niebieska skuteczna.</p><p><strong>Wzorzec:</strong> wartość skuteczna to nie „średnia wysokość przebiegu”, tylko napięcie stałe o <em>tym samym grzaniu</em>. Grzanie idzie z kwadratu napięcia, a kwadrat premiuje szczyty — dlatego równoważne napięcie stałe wypada wysoko, na 70,7 % amplitudy. Zaraz to zobaczysz jako pola pod krzywą mocy.</p>");
+  $("st3").classList.add("done"); $("s1done").hidden=false;
+});
+$("b1next").addEventListener("click", function(){ unlock("s2"); });
+
+/* --- S2 --- */
+var touched2=false;
+$("p2b").addEventListener("click", function(){
+  var v=num($("p2").value);
+  if(isNaN(v)){ showRev("p2r","Postaw liczbę przed dotknięciem suwaka — to cała soczewka tego ćwiczenia.","warn"); return; }
+  showRev("p2r","Zapisane: <strong>×"+fmt(v,2)+"</strong>. Teraz sprawdź to suwakiem: ustaw 100 V, popatrz na U<sub>sk</sub>, potem 200 V.");
+  $("p2b").disabled=true; $("p2").disabled=true;
+  $("s2body").hidden=false; draw2();
+  $("amp").focus();
+});
+$("amp").addEventListener("input", function(){
+  st2.A = parseFloat(this.value); draw2();
+  if(!touched2){ touched2=true; }
+  if(st2.A>=190 && touched2){ $("se2").hidden=false; }
+});
+$("amp").addEventListener("change", function(){ $("se2").hidden=false; });
+$("pre339").addEventListener("click", function(){
+  st2.A=339; $("amp").value=339; draw2(); $("se2").hidden=false;
+});
+$("pre100").addEventListener("click", function(){ st2.A=100; $("amp").value=100; draw2(); });
+$("halfT").addEventListener("click", function(){
+  st2.showHalf=!st2.showHalf; this.setAttribute("aria-pressed", String(st2.showHalf)); draw2();
+});
+$("se2b").addEventListener("click", function(){
+  if($("se2a").value.trim().length<3){ showRev("se2r","Jedno zdanie, choćby niepewne.","warn"); return; }
+  var g=num($("p2").value);
+  var cmp = isNaN(g) ? "" : ("Twój strzał przed dotknięciem: <strong>×"+fmt(g,2)+"</strong>. Prawidłowo: <strong>×2</strong> — napięcie skuteczne rośnie <em>liniowo</em> z amplitudą. Uwaga: moc urosłaby ×4, i to właśnie tam ludzie mylą krotności. ");
+  showRev("se2r","<p>"+cmp+"</p><p><strong>Wzorzec:</strong> wszystkie trzy wartości to ta sama sinusoida przemnożona przez jedną liczbę. Skalowanie nie zmienia kształtu, więc stałe czynniki 2 (pp) i 1/√2 (skuteczna) trzymają się bez zmian — 0,707 nie zależy od amplitudy, tylko od tego, że przebieg jest sinusoidalny.</p>");
+  $("s2next").hidden=false;
+});
+$("b2next").addEventListener("click", function(){ unlock("s3"); });
+
+/* --- S3 --- */
+$("p3b").addEventListener("click", function(){
+  var v=num($("p3").value);
+  if(isNaN(v)){ showRev("p3r","Wpisz procent — strzelaj.","warn"); return; }
+  var msg = "Zapisane: <strong>"+fmt(v,1)+" %</strong>. Znajdź teraz ten poziom sam: przeciągaj niebieską linię, aż dolne pola się zrównają.";
+  var cls = null;
+  if(Math.abs(v-50)<4){ msg += " (Postawiłeś na 50 % — to najczęstsza intuicja i zaraz zobaczysz dokładnie, o ile chybia.)"; cls="warn"; }
+  showRev("p3r",msg,cls);
+  $("p3b").disabled=true; $("p3").disabled=true;
+  $("s3body").hidden=false; draw3(); $("dc").focus();
+});
+$("dc").addEventListener("input", function(){ st3.frac=parseFloat(this.value)/100; draw3(); });
+$("dc50").addEventListener("click", function(){ st3.frac=0.5; $("dc").value=50; draw3(); });
+$("dc707").addEventListener("click", function(){ st3.frac=0.707; $("dc").value=70.7; draw3(); });
+(function dragDC(){
+  var cv=$("cv3"), dragging=false;
+  function set(ev){
+    var r=cv.getBoundingClientRect();
+    var H=parseFloat(cv.dataset.h), T=14, B=16, gap=26;
+    var hTop=(H-T-B-gap)*0.46, tY0=T, tY1=T+hTop, cy=(tY0+tY1)/2, half=hTop/2-6;
+    var y=ev.clientY-r.top;
+    var v=(cy-y)/half; /* w jednostkach A */
+    v=Math.max(0,Math.min(1,v));
+    st3.frac=v; $("dc").value=(v*100).toFixed(1); draw3();
+  }
+  cv.addEventListener("pointerdown", function(ev){
+    dragging=true; cv.setPointerCapture(ev.pointerId); set(ev); ev.preventDefault();
+  });
+  cv.addEventListener("pointermove", function(ev){ if(dragging) set(ev); });
+  cv.addEventListener("pointerup", function(){ dragging=false; });
+  cv.addEventListener("pointercancel", function(){ dragging=false; });
+})();
+$("se3b").addEventListener("click", function(){
+  if($("se3a").value.trim().length<3){ showRev("se3r","Jedno zdanie.","warn"); return; }
+  showRev("se3r","<p><strong>Wzorzec:</strong> porównujesz <em>pola</em> pod krzywą mocy, a moc to kwadrat napięcia. Napięcie stałe 50 % amplitudy daje moc 0,5² = <strong>25 %</strong> mocy szczytowej, a sinusoida daje średnio <strong>50 %</strong> (bo średnia z sin² to ½). Żeby trafić w 50 %, napięcie stałe musi wynosić √0,5 = <strong>0,707</strong> amplitudy. Czyli U<sub>sk</sub> = U<sub>max</sub>/√2 — √2 jest konsekwencją tego, że wyrównujesz kwadraty.</p>");
+});
+$("q1b").addEventListener("click", function(){
+  if($("q1").value.trim().length<5){ alert("Napisz coś z pamięci — choćby trzy słowa. Odpowiedź odsłania się dopiero po próbie."); return; }
+  $("q1r").classList.add("show");
+});
+$("b3next").addEventListener("click", function(){ unlock("s4"); draw4(); verdict0(); });
+
+/* --- S4 --- */
+$("up").addEventListener("input", function(){ st4.A=parseFloat(this.value); draw4(); });
+$("upre").addEventListener("click", function(){ st4.A=100; $("up").value=100; draw4(); });
+function verdict0(){
+  var el=$("verdict0");
+  if(guess0===null){ el.innerHTML=""; return; }
+  var html="", cls="";
+  if(Math.abs(guess0-100)<3){
+    html="<p><strong>Twoja odpowiedź z sekcji 0: "+fmt(guess0,0)+" W. Poprawnie: 100 W. Trafione.</strong> Ustaw suwak na 100 V i sprawdź, że obie dobre drogi dają tę samą liczbę.</p>";
+  } else if(Math.abs(guess0-50)<6){
+    html="<p><strong>Powiedziałeś "+fmt(guess0,0)+" W, jest 100 W.</strong> To dokładnie skutek reguły „szczytowe na pół to nominalne”: (100/2)²/50 = 50 W. Ale wolno dzielić tylko przez √2, nie przez 2 — a ponieważ napięcie wchodzi do kwadratu, ta drobna różnica w napięciu robi <em>dwukrotny</em> błąd w mocy. Czerwony panel po lewej pokazuje tę pomyłkę na żywo przy każdej amplitudzie.</p>"; cls="bad";
+  } else if(Math.abs(guess0-200)<10 || Math.abs(guess0-400)<20){
+    html="<p><strong>Powiedziałeś "+fmt(guess0,0)+" W, jest 100 W.</strong> Ten wynik wychodzi, gdy do wzoru wpadnie wartość międzyszczytowa albo zginie dwójka w mianowniku — patrz czerwone panele.</p>"; cls="bad";
+  } else {
+    html="<p><strong>Powiedziałeś "+fmt(guess0,0)+" W, jest 100 W:</strong> P = 100²/(2·50) = 10 000/100 = 100 W. Sprawdź obie drogi na suwaku — muszą się zgadzać co do wata.</p>"; cls="warn";
+  }
+  el.innerHTML=html; el.className="reveal show"+(cls?(" "+cls):"");
+}
+$("q2b").addEventListener("click", function(){
+  if($("q2").value.trim().length<8){ alert("Wypisz kroki z pamięci — dopiero wtedy odsłonię wzorzec."); return; }
+  $("q2r").classList.add("show");
+});
+$("q3b").addEventListener("click", function(){
+  if($("q3").value.trim().length<8){ alert("Spróbuj wyprowadzić — nawet krzywo. Odsłonięcie po próbie."); return; }
+  $("q3r").classList.add("show");
+});
+$("b4next").addEventListener("click", function(){ unlock("s5"); });
+
+/* --- S5 --- */
+$("p5b").addEventListener("click", function(){
+  var v=num($("p5").value);
+  if(isNaN(v)){ showRev("p5r","Wpisz liczbę watów.","warn"); return; }
+  var cls = (v>60)?"warn":null;
+  showRev("p5r","Zapisane: <strong>"+fmt(v,0)+" W</strong>. Patrz na obwiednię i na pasek wypełnienia poniżej."+(v>60?" (Typowa mowa w SSB wychodzi znacznie niżej, niż podpowiada intuicja.)":""),cls);
+  $("p5b").disabled=true; $("p5").disabled=true;
+  $("s5body").hidden=false;
+  draw5();
+  if(!RM){ st5.run=true; loop5(); }
+});
+function mode(m){
+  st5.mode=m;
+  $("mSSB").setAttribute("aria-pressed", String(m==="ssb"));
+  $("mFM").setAttribute("aria-pressed", String(m==="fm"));
+  draw5();
+}
+$("mSSB").addEventListener("click", function(){ mode("ssb"); });
+$("mFM").addEventListener("click", function(){ mode("fm"); });
+$("expl5").addEventListener("click", function(){
+  st5.run=false; if(raf) cancelAnimationFrame(raf);
+  $("ex5").classList.add("show");
+  $("b5next").focus();
+});
+$("b5next").addEventListener("click", function(){
+  st5.run=false; if(raf) cancelAnimationFrame(raf);
+  unlock("s6");
+});
+
+/* --- S6 --- */
+$("q4b").addEventListener("click", function(){
+  if($("q4").value.trim().length<10){ alert("Odtwórz szkielet z pamięci, potem porównaj."); return; }
+  $("q4r").classList.add("show");
+});
+})();
+</script>
+</body>
+</html>

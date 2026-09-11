@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8">
+<title>Wzory na egzamin — kategoria 1</title>
+<style>
+@page{size:A4;margin:11mm 10mm 9mm}
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;background:#fff;color:#111;
+ font:9.2pt/1.36 "Helvetica Neue",Helvetica,Arial,sans-serif;
+ -webkit-font-smoothing:antialiased}
+.sheet{max-width:194mm;margin:0 auto;padding:8mm 4mm 10mm}
+header{border-bottom:1.6pt solid #111;padding-bottom:3mm;margin-bottom:4mm;
+ display:flex;align-items:baseline;justify-content:space-between;gap:8mm}
+h1{font-size:14pt;margin:0;letter-spacing:-.01em;font-weight:700}
+header .meta{font-size:7.6pt;color:#555;text-align:right;line-height:1.3}
+.cols{column-count:2;column-gap:7mm;column-rule:.4pt solid #ccc}
+section{break-inside:avoid;page-break-inside:avoid;margin:0 0 4.2mm}
+h2{font-size:8.2pt;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+ margin:0 0 1.6mm;padding-bottom:.8mm;border-bottom:.5pt solid #111;color:#111}
+h2 .no{color:#888;margin-right:1.5mm;font-weight:400}
+pre{font:9pt/1.42 "SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+ margin:0 0 1.6mm;padding:0 0 0 2.6mm;border-left:1.2pt solid #999;white-space:pre-wrap}
+ul{margin:0 0 1.6mm;padding-left:3.6mm;list-style:none}
+li{margin:0 0 .5mm;font-size:8.2pt;color:#333;text-indent:-3.6mm;padding-left:3.6mm}
+li::before{content:"›";color:#999;margin-right:1.6mm}
+li b{color:#111}
+.note{font-size:8.2pt;color:#444;margin:0 0 1.6mm;font-style:italic}
+table{border-collapse:collapse;width:100%;margin:0 0 1.6mm;font-size:8.4pt}
+th{text-align:left;font-weight:700;font-size:7.4pt;letter-spacing:.05em;
+ text-transform:uppercase;color:#666;border-bottom:.5pt solid #999;padding:.6mm 1.6mm .6mm 0}
+td{padding:.55mm 1.6mm .55mm 0;border-bottom:.3pt solid #ddd;
+ font-variant-numeric:tabular-nums}
+td.k{font-weight:700;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.warn{border:.9pt solid #111;padding:2mm 2.4mm;margin:0 0 1.6mm;break-inside:avoid}
+.warn h3{margin:0 0 1.2mm;font-size:7.8pt;letter-spacing:.08em;text-transform:uppercase}
+.warn ol{margin:0;padding-left:4mm;font-size:8.3pt}
+.warn li{text-indent:0;padding-left:0;margin:0 0 .8mm;color:#111}
+.warn li::before{content:none}
+.warc{font-weight:700}
+.tag{font-size:7pt;color:#777;font-weight:400}
+footer{margin-top:4mm;padding-top:2mm;border-top:.5pt solid #ccc;
+ font-size:7.2pt;color:#777;display:flex;justify-content:space-between}
+.noprint{margin:0 auto 4mm;max-width:194mm;padding:0 4mm}
+.noprint button{font:inherit;font-size:9pt;padding:6px 16px;border:1px solid #111;
+ background:#111;color:#fff;border-radius:4px;cursor:pointer}
+.noprint span{font-size:8.5pt;color:#555;margin-left:10px}
+@media print{.noprint{display:none}body{font-size:9pt}.sheet{padding:0;max-width:none}}
+@media screen{body{background:#e9e7e2;padding:16px 0}
+ .sheet{background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18);border-radius:2px}}
+</style></head><body>
+<div class="noprint"><button onclick="print()">Drukuj / zapisz jako PDF</button>
+<span>A4 · dwie kolumny · mieści się na jednej kartce dwustronnie</span></div>
+
+<div class="sheet">
+<header>
+ <h1>Wzory na egzamin — pozwolenie kategorii 1</h1>
+ <div class="meta">pula UKE, Kategoria 1, Wersja 3<br>przy każdym wzorze pytanie do sprawdzenia</div>
+</header>
+
+<div class="cols">
+
+<section><h2><span class="no">1</span>Wartości prądu zmiennego</h2>
+<pre>U_sk  = U_max / √2 = 0,707 · U_max
+U_max = U_sk  · √2 = 1,41  · U_sk
+U_międzyszczytowe = 2 · U_max
+U_sk  = U_pp / 2,83</pre>
+<ul>
+<li>pyt. 16 — 230 V sk → amplituda <b>325 V</b></li>
+<li>pyt. 134 — amplituda 200 V → sk <b>141,4 V</b></li>
+<li>pyt. 233 — 678 V pp → 339 szczytu → <b>240 V sk</b></li>
+</ul></section>
+
+<section><h2><span class="no">2</span>Moc</h2>
+<pre>P = U · I = U² / R = I² · R
+
+PEP = U_max² / (2R)    z amplitudy
+PEP = U_pp²  / (8R)    z międzyszczytowego
+
+η = P_wy / P_zas · 100 %</pre>
+<ul>
+<li>pyt. 80, 240 — U_max 100 V, R 50 Ω → <b>100 W</b></li>
+<li>pyt. 41 — U_pp 200 V → <b>100 W</b></li>
+<li>pyt. 146, 239 — 100 W wej., 40 W wyj. → <b>40 %</b></li>
+</ul>
+<p class="note">Skąd 2R: średnia z sin² wynosi ½, więc moc średnia to połowa szczytowej.</p></section>
+
+<section><h2><span class="no">3</span>Decybele</h2>
+<pre>moc:      dB = 10 · log(P₂/P₁)
+napięcie: dB = 20 · log(U₂/U₁)</pre>
+<table>
+<tr><th>dB</th><th>moc</th><th>napięcie</th></tr>
+<tr><td class="k">3 dB</td><td>×2</td><td>×1,41</td></tr>
+<tr><td class="k">6 dB</td><td>×4</td><td><b>×2</b></td></tr>
+<tr><td class="k">10 dB</td><td>×10</td><td>×3,16</td></tr>
+<tr><td class="k">20 dB</td><td>×100</td><td>×10</td></tr>
+</table>
+<pre>0 dBm = 1 mW    30 dBm = 1 W
+40 dBm = 10 W   50 dBm = 100 W
+0 dBW = 1 W     dBm = dBW + 30
+
+dBm − dBm = dB      dBm + dB = dBm
+dBm + dBm = bez sensu</pre>
+<ul>
+<li><b>Szum termiczny</b> −174 dBm/Hz, dalej + 10·log(szerokość)</li>
+<li>pyt. 20 — kanał 10 kHz → +40 dB → <b>−134 dBm</b></li>
+<li><b>S-metr: 1 jednostka S = 6 dB</b></li>
+<li>pyt. 35 — S7→S9 = 12 dB = <b>16 razy mocy</b></li>
+<li>Anteny: <b>dBi = dBd + 2,15</b></li>
+</ul></section>
+
+<section><h2><span class="no">4</span>Rezonans i reaktancja</h2>
+<pre>f = 1 / (2π√(LC))      f ∝ 1/√(LC)
+Q = f / Δf             Δf = f / Q
+Q = X / R
+X_L = 2π f L
+X_C = 1 / (2π f C)     X_C ∝ 1/C</pre>
+<ul>
+<li>pyt. 158 — f ×2 → <b>C ÷4</b>. 400 → <b>100 pF</b></li>
+<li>pyt. 262 — 14 MHz / 100 = <b>140 kHz</b></li>
+<li>pyt. 245 — C ×10 → X_C <b>÷10</b></li>
+</ul></section>
+
+<section><h2><span class="no">5</span>Łączenie elementów</h2>
+<pre>cewki szeregowo      L = L₁ + L₂
+cewki równolegle     jak R równolegle
+kondensatory równol. C = C₁ + C₂
+kondensatory szereg. jak R równolegle
+rezystory szeregowo  R = R₁ + R₂
+rezystory równolegle 1/R = 1/R₁ + 1/R₂</pre>
+<ul>
+<li>pyt. 260 — 30 + 60 = <b>90 µH</b></li>
+<li><b>Rdzeń:</b> L = µ · L_powietrzna — <b>ROŚNIE</b></li>
+<li>pyt. 81 — 100 µH, µ = 10 → <b>1000 µH</b></li>
+<li><b>Grubszy drut → mniejsze R → większe Q</b> (pyt. 82)</li>
+</ul></section>
+
+<section><h2><span class="no">6</span>Fale i linie</h2>
+<pre>λ [m]   = 300 / f [MHz]
+f [MHz] = 300 / λ [m]</pre>
+<ul>
+<li>dipol półfalowy ≈ <b>73 Ω</b>; niżej zawieszony → impedancja <b>maleje</b></li>
+<li>współczynnik skrócenia = prędkość w kablu / prędkość w próżni</li>
+<li>SWR <b>1:1</b> = dopasowanie · SWR <b>∞</b> = zwarcie albo przerwa</li>
+</ul></section>
+
+<section><h2><span class="no">7</span>Tranzystor i zasilacz</h2>
+<pre>β = I_C / I_B          I_B = I_C / β</pre>
+<ul><li>pyt. 151 — 100 mA / 100 = <b>1 mA</b></li></ul>
+<pre>zasilacz nieobciążony z filtrem C:
+   U_wy = U_sk · 1,41
+   U_sk = U_wy / 1,41
+dioda: U_wsteczne ≥ U_sk · 1,41</pre>
+<ul>
+<li>pyt. 161 — 25 V na wyjściu → transformator <b>17,7 V sk</b></li>
+<li>pyt. 252 — 300 V sk → szczyt <b>424 V</b> → dioda 400 V <b>nie wystarczy</b></li>
+</ul></section>
+
+<section><h2><span class="no">8</span>Konfiguracje tranzystorowe</h2>
+<p class="note">Elektroda z nazwy jest punktem odniesienia i występuje w OBU parach.</p>
+<table>
+<tr><th>układ</th><th>wejście</th><th>wyjście</th></tr>
+<tr><td class="k">wspólny emiter</td><td>baza</td><td>kolektor</td></tr>
+<tr><td class="k">wspólna baza</td><td><b>emiter</b></td><td>kolektor</td></tr>
+<tr><td class="k">wspólny kolektor</td><td>baza</td><td><b>emiter</b></td></tr>
+</table>
+<ul>
+<li>Baza steruje, kolektor oddaje, <b>emiter wskakuje na wolne miejsce</b></li>
+<li>Środkowa litera to baza: <b>N<u>P</u>N → plus</b>, <b>P<u>N</u>P → minus</b></li>
+<li>Bipolarny sterowany <b>prądem</b>, polowy <b>napięciem</b></li>
+</ul></section>
+
+<section><h2><span class="no">9</span>Zakresy pasm</h2>
+<table>
+<tr><th>pasmo</th><th>zakres</th></tr>
+<tr><td class="k">160 m</td><td>1810–2000 kHz</td></tr>
+<tr><td class="k">80 m</td><td>3500–3800 kHz</td></tr>
+<tr><td class="k">40 m</td><td>7000–7200 kHz</td></tr>
+<tr><td class="k warc">30 m</td><td class="warc">10100–10150 kHz <span class="tag">WARC · 50 kHz</span></td></tr>
+<tr><td class="k">20 m</td><td>14000–14350 kHz</td></tr>
+<tr><td class="k warc">17 m</td><td class="warc">18068–18168 kHz <span class="tag">WARC · 100 kHz</span></td></tr>
+<tr><td class="k">15 m</td><td>21000–21450 kHz</td></tr>
+<tr><td class="k warc">12 m</td><td class="warc">24890–24990 kHz <span class="tag">WARC · 100 kHz</span></td></tr>
+<tr><td class="k">10 m</td><td>28000–29700 kHz</td></tr>
+<tr><td class="k">6 m</td><td>50–52 MHz</td></tr>
+<tr><td class="k">2 m</td><td>144–146 MHz</td></tr>
+</table>
+<p class="note">Pasma WARC są wąskie — 50 albo 100 kHz. Wariant dający pasmu WARC więcej niż 100 kHz jest błędny bez liczenia.</p></section>
+
+<section><h2><span class="no">10</span>Kategorie, moce, okresy</h2>
+<table>
+<tr><th>kategoria</th><th>moc</th><th>okres</th></tr>
+<tr><td class="k">1</td><td>500 W · wszystkie zakresy w RP</td><td>25 lat</td></tr>
+<tr><td class="k">3</td><td>100 W · lista <b>Z</b> pasmami WARC</td><td>25 lat</td></tr>
+<tr><td class="k">5</td><td>50 W ≤30 MHz · 15 W &gt;30 MHz</td><td>10 lat</td></tr>
+<tr><td class="k">dodatkowe</td><td>1500 W</td><td>12 mies.</td></tr>
+</table></section>
+
+<section><h2><span class="no">11</span>Szerokości pasm i pośrednie</h2>
+<pre>PSK31  ~31 Hz     CW   ~100 Hz
+SSB    2,7 kHz    AM   2 × SSB
+FM fonia UKF  ~12–16 kHz
+
+I p.cz. UKF 10,7 MHz
+II p.cz.       455 kHz</pre>
+<ul>
+<li><b>RTTY = FSK</b> — kluczowanie częstotliwości („shift 170 Hz")</li>
+<li><b>DDS → przetwornik cyfrowo-analogowy</b></li>
+<li>Detektory: dioda → <b>AM</b> · mieszacz+BFO → <b>SSB/CW</b> · PLL → <b>FM</b></li>
+<li>SSB trzy metody: <b>filtrowa, fazowa, Weavera</b></li>
+</ul></section>
+
+<section><div class="warn"><h3>Trzy pułapki rachunkowe</h3><ol>
+<li><b>PEP dzieli się przez 2R</b>, nie przez R. Bez dwójki wychodzi dwa razy za dużo.</li>
+<li><b>6 dB to ×4 mocy, ale ×2 napięcia.</b> Sprawdź, o którą wielkość pytają.</li>
+<li><b>Pod pierwiastkiem zmiana się kwadratuje.</b> f ×2 → C ÷4.</li>
+</ol></div>
+<div class="warn"><h3>Zanim odpowiesz</h3><ol>
+<li>Pytanie o <b>zmianę wielkości</b> — powiedz kierunek słowem, zanim policzysz.</li>
+<li>Pytanie o <b>procedurę lub definicję</b> — policz człony, ale sprawdź, czy dołożony ogon należy do <b>tego</b> pojęcia, czy do sąsiedniego.</li>
+</ol></div></section>
+
+</div>
+<footer><span>Egzamin: 4 września 2026 · próg 75 % w każdym z czterech wymogów, bez kompensacji</span><span>SP · kategoria 1</span></footer>
+</div>
+</body></html>

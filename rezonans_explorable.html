@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reaktancja, rezonans i dobroć Q — eksplorowalne</title>
+<!--
+  ENGRAM EXPLORABLE
+  node:        reaktancja-rezonans-dobroc
+  topic:       krotkofalarstwo-a
+  generated:   2026-07-29
+  scaffold:    novice (worked drive przed swobodną manipulacją — klauzula 2)
+  interests:   inżynieria oprogramowania, systemy rozproszone / Kubernetes (użyte jako jedna analogia: filtr p.cz. = rate limiter z wąskim oknem)
+  misconceptions targeted:
+    1. szeregowy i równoległy zachowują się w rezonansie identycznie
+    2. reaktancja rozprasza moc jak rezystancja
+    3. wyższe Q zawsze lepsze
+  self-contained: brak CDN, brak fontów zewnętrznych, brak fetch. Otwierane z file://
+-->
+<style>
+  :root{
+    --bg:#fbfaf7; --panel:#ffffff; --ink:#1a1c1f; --ink-dim:#5a6069; --line:#dcdcd6;
+    --accent:#7a4bd6; --accent-soft:#efe7ff;
+    --xl:#c2410c;      /* cewka */
+    --xc:#1d4ed8;      /* kondensator */
+    --ser:#0f766e;     /* szeregowy */
+    --par:#a21caf;     /* równoległy */
+    --ok:#166534; --bad:#b91c1c;
+    --grid:#e8e8e2; --shade:rgba(122,75,214,.12);
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root[data-theme="auto"]{
+      --bg:#14161a; --panel:#1c1f25; --ink:#e9e9e4; --ink-dim:#a0a6b0; --line:#333842;
+      --accent:#b79bff; --accent-soft:#2a2340;
+      --xl:#fb923c; --xc:#7dabff; --ser:#4fd1c5; --par:#e879f9;
+      --ok:#4ade80; --bad:#f87171;
+      --grid:#262a31; --shade:rgba(183,155,255,.16);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14161a; --panel:#1c1f25; --ink:#e9e9e4; --ink-dim:#a0a6b0; --line:#333842;
+    --accent:#b79bff; --accent-soft:#2a2340;
+    --xl:#fb923c; --xc:#7dabff; --ser:#4fd1c5; --par:#e879f9;
+    --ok:#4ade80; --bad:#f87171;
+    --grid:#262a31; --shade:rgba(183,155,255,.16);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:17px}
+  main{max-width:820px;margin:0 auto;padding:24px 18px 80px}
+  h1{font-size:1.55rem;line-height:1.25;margin:.2em 0 .1em}
+  h2{font-size:1.18rem;margin:2.2em 0 .4em;padding-top:.6em;border-top:1px solid var(--line)}
+  h3{font-size:1rem;margin:1.4em 0 .3em}
+  p{margin:.6em 0}
+  .lead{color:var(--ink-dim)}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+  .step-tag{font:600 .72rem/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:.35em}
+  canvas{width:100%;display:block;border-radius:6px;touch-action:none}
+  .ctrl{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}
+  .ctrl label{min-width:150px;font:600 .88rem/1.3 var(--sans)}
+  .ctrl input[type=range]{flex:1;min-width:170px;accent-color:var(--accent)}
+  .val{font:600 .92rem/1 var(--mono);min-width:110px;text-align:right}
+  button{font:inherit;font-size:.9rem;padding:7px 13px;border-radius:7px;border:1px solid var(--line);
+         background:var(--panel);color:var(--ink);cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  button[disabled]{opacity:.45;cursor:not-allowed}
+  button.sel{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+  .choices{display:flex;gap:8px;flex-wrap:wrap;margin:.3em 0 .8em}
+  .readout{font:.9rem/1.5 var(--mono);background:var(--accent-soft);border-radius:7px;padding:9px 12px;margin:10px 0}
+  .verdict{border-left:4px solid var(--accent);padding:8px 12px;margin:10px 0;background:var(--accent-soft);border-radius:0 7px 7px 0}
+  .ok{color:var(--ok);font-weight:700}
+  .bad{color:var(--bad);font-weight:700}
+  textarea{width:100%;min-height:88px;font:inherit;font-size:.95rem;padding:9px;border-radius:7px;
+           border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical}
+  input[type=text],input[type=number]{font:inherit;font-size:.95rem;padding:6px 9px;border-radius:7px;
+           border:1px solid var(--line);background:var(--bg);color:var(--ink);width:130px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font:.85rem/1.4 var(--sans);margin:6px 0 2px;color:var(--ink-dim)}
+  .legend b{font-weight:700}
+  .k-xl{color:var(--xl)} .k-xc{color:var(--xc)} .k-ser{color:var(--ser)} .k-par{color:var(--par)}
+  .locknote{color:var(--ink-dim);font-style:italic;font-size:.92rem}
+  .aside{border:1px dashed var(--line);border-radius:8px;padding:10px 13px;margin:14px 0;font-size:.94rem;color:var(--ink-dim)}
+  .aside b{color:var(--ink)}
+  .themebtn{position:fixed;top:10px;right:10px;z-index:9;font-size:.8rem;padding:5px 10px}
+  .hidden{display:none}
+  .formula{font:600 1rem/1.7 var(--mono);background:var(--accent-soft);padding:8px 12px;border-radius:7px;display:inline-block}
+  ul{margin:.4em 0 .4em 1.1em;padding:0} li{margin:.25em 0}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<button class="themebtn" id="themeBtn" aria-label="Przełącz motyw jasny/ciemny">motyw</button>
+<main>
+
+<h1>Reaktancja, rezonans i dobroć Q</h1>
+<p class="lead">Nie czytaj tej strony — pokręć nią. Zaczynasz od zachowania układu; wzory pojawią się dopiero wtedy, gdy będą tylko podpisem pod tym, co już zobaczyłeś.</p>
+
+<!-- ============ 1. BRAMKA PREDYKCJI ============ -->
+<h2>1. Zanim cokolwiek zobaczysz — zgadnij</h2>
+<p>Do cewki i do kondensatora podłączamy generator sinusoidalny i <b>podnosimy częstotliwość</b>. Oba elementy stawiają prądowi jakiś opór (nazwiemy go zaraz po imieniu). Postaw zakład — bez tego reszta strony się nie odblokuje.</p>
+
+<div class="panel">
+  <span class="step-tag">Zakład 1 z 4</span>
+  <p><b>Cewka (L)</b> — gdy częstotliwość rośnie, jej opór dla prądu:</p>
+  <div class="choices" id="gA1">
+    <button data-v="ros">rośnie</button><button data-v="mal">maleje</button><button data-v="brak">nie zmienia się</button>
+  </div>
+  <p><b>Kondensator (C)</b> — gdy częstotliwość rośnie, jego opór dla prądu:</p>
+  <div class="choices" id="gA2">
+    <button data-v="ros">rośnie</button><button data-v="mal">maleje</button><button data-v="brak">nie zmienia się</button>
+  </div>
+  <button id="gAsubmit" disabled>Zatwierdzam i odblokowuję</button>
+  <div id="gAout" class="hidden"></div>
+</div>
+
+<!-- ============ 2. WORKED DRIVE ============ -->
+<section id="sec2" hidden>
+<h2>2. Przejazd prowadzony: trzy częstotliwości, jeden obwód</h2>
+<p>Bierzemy konkretny obwód: <b>L = 1 µH</b>, <b>C = 129 pF</b> (to nie są przypadkowe liczby — zobaczysz za chwilę dlaczego). Przejedziemy przez trzy częstotliwości. Przy każdej najpierw odpowiadasz, potem odsłaniam liczby. Suwaki są jeszcze zablokowane — najpierw prowadzony przejazd, potem swobodna zabawa.</p>
+
+<div class="panel">
+  <div class="legend"><span class="k-xl"><b>——</b> X<sub>L</sub> — opór cewki</span><span class="k-xc"><b>——</b> X<sub>C</sub> — opór kondensatora</span></div>
+  <canvas id="cv1" height="330" aria-label="Wykres reaktancji cewki i kondensatora w funkcji częstotliwości"></canvas>
+  <div class="readout" id="ro1" aria-live="polite"></div>
+</div>
+
+<div class="panel" id="stepBox">
+  <span class="step-tag" id="stepTag"></span>
+  <p id="stepQ"></p>
+  <div class="choices" id="stepChoices"></div>
+  <div id="stepOut" class="hidden"></div>
+  <button id="stepNext" class="hidden">Dalej</button>
+</div>
+</section>
+
+<!-- ============ 3. SWOBODNA MANIPULACJA ============ -->
+<section id="sec3" hidden>
+<h2>3. Teraz ty: dwa suwaki i punkt przecięcia</h2>
+<p>Odblokowane. Suwaki L i C przesuwają obie krzywe; suwak f przesuwa pionowy znacznik. Punkt, w którym krzywe się przecinają, ma na wykresie kropkę i nazwę: <b>f<sub>0</sub></b>, częstotliwość rezonansowa. Poszukaj sam: co robi f<sub>0</sub>, gdy zwiększasz C? A gdy zwiększasz L?</p>
+
+<div class="panel">
+  <div class="ctrl"><label for="sL">Indukcyjność L</label><input type="range" id="sL" min="0" max="1000" value="500"><span class="val" id="vL"></span></div>
+  <div class="ctrl"><label for="sC">Pojemność C</label><input type="range" id="sC" min="0" max="1000" value="500"><span class="val" id="vC"></span></div>
+  <div class="ctrl"><label for="sF">Częstotliwość f</label><input type="range" id="sF" min="0" max="1000" value="600"><span class="val" id="vF"></span></div>
+  <p style="margin:.2em 0 0"><button id="btnReset">wróć do L = 1 µH, C = 129 pF</button></p>
+</div>
+
+<div class="panel">
+  <span class="step-tag">Zapis tego, co widzisz</span>
+  <p>Krzywa cewki to prosta rosnąca, krzywa kondensatora — opadająca. Dokładnie tak wyglądają wzory, które teraz możesz przyjąć, bo są tylko podpisem pod wykresem:</p>
+  <p class="formula">X<sub>L</sub> = 2πfL &nbsp;&nbsp;·&nbsp;&nbsp; X<sub>C</sub> = 1 / (2πfC) &nbsp;&nbsp;·&nbsp;&nbsp; [X] = Ω</p>
+  <p>W miejscu przecięcia X<sub>L</sub> = X<sub>C</sub>, czyli 2πf<sub>0</sub>L = 1/(2πf<sub>0</sub>C). Rozwiąż to na f<sub>0</sub>, a wypadnie:</p>
+  <p class="formula">f<sub>0</sub> = 1 / (2π√(LC))</p>
+  <p><b>Uwaga na jednostkę.</b> Reaktancja ma omy, ale <b>nie jest rezystancją</b>. Do tego wracamy w sekcji 7 — i to nie jest dygresja, tylko drugi z trzech błędów, które ta strona ma ci wybić z głowy.</p>
+</div>
+</section>
+
+<!-- ============ 4. SZEREGOWY vs RÓWNOLEGŁY ============ -->
+<section id="sec4" hidden>
+<h2>4. Ten sam L, ten sam C, ta sama f<sub>0</sub> — dwa przeciwne zachowania</h2>
+<p>Teraz najważniejsza rzecz na tej stronie. Bierzemy dokładnie te same L i C i łączymy je na dwa sposoby: <b>szeregowo</b> (jeden za drugim, w torze prądu) i <b>równolegle</b> (obok siebie, oba na tym samym napięciu). Rysujemy impedancję |Z| widzianą z zacisków, w funkcji częstotliwości.</p>
+
+<div class="panel">
+  <span class="step-tag">Zakład 2 z 4</span>
+  <p>Co zrobi <b>impedancja obwodu równoległego</b> w f<sub>0</sub>, w porównaniu z szeregowym?</p>
+  <div class="choices" id="gB">
+    <button data-v="same">to samo co szeregowy — spadnie do minimum</button>
+    <button data-v="peak">odwrotnie — skoczy do maksimum</button>
+    <button data-v="flat">nic szczególnego, będzie płasko</button>
+  </div>
+  <button id="gBsubmit" disabled>Zatwierdzam</button>
+  <div id="gBout" class="hidden"></div>
+</div>
+
+<div id="sec4b" hidden>
+<div class="panel">
+  <div class="choices">
+    <button id="btnSer" class="sel">SZEREGOWY</button>
+    <button id="btnPar">RÓWNOLEGŁY</button>
+  </div>
+  <div class="legend"><span class="k-ser"><b>——</b> szeregowy |Z|</span><span class="k-par"><b>——</b> równoległy |Z|</span><span>krzywa nieaktywna jest przygaszona — porównuj</span></div>
+  <canvas id="cv2" height="320" aria-label="Impedancja obwodu szeregowego i równoległego w funkcji częstotliwości, skala logarytmiczna"></canvas>
+  <div class="readout" id="ro2" aria-live="polite"></div>
+  <div class="ctrl"><label for="sQ1">Dobroć Q</label><input type="range" id="sQ1" min="5" max="300" value="40"><span class="val" id="vQ1"></span></div>
+  <p class="locknote">Przełącz kilka razy SZEREGOWY ↔ RÓWNOLEGŁY i pokręć Q, zanim otworzysz pytanie niżej.</p>
+</div>
+
+<div class="panel">
+  <span class="step-tag">Wyjaśnij sobie</span>
+  <p><b>Dlaczego przy tej samej f<sub>0</sub> obwód szeregowy ma minimum impedancji, a równoległy maksimum — skoro X<sub>L</sub> i X<sub>C</sub> są w obu przypadkach dokładnie takie same?</b></p>
+  <textarea id="seTA" placeholder="Napisz jedno zdanie własnymi słowami. Podpowiedź: w szeregowym dodają się napięcia na L i C, w równoległym — prądy przez L i C."></textarea>
+  <p><button id="seBtn" disabled>Pokaż wyjaśnienie</button></p>
+  <div id="seOut" class="hidden verdict">
+    <p>W obu układach X<sub>L</sub> i X<sub>C</sub> są w f<sub>0</sub> równe co do wartości i <b>przeciwne co do znaku</b> (napięcie na cewce wyprzedza prąd o 90°, na kondensatorze opóźnia się o 90° — są w przeciwfazie).</p>
+    <ul>
+      <li><b>Szeregowo</b> płynie jeden wspólny prąd, a napięcia się dodają: +jX i −jX kasują się nawzajem, zostaje samo R. Impedancja spada do minimum, prąd ze źródła jest największy. Obwód szeregowy w rezonansie to <b>zwarcie</b> dla f<sub>0</sub>.</li>
+      <li><b>Równolegle</b> jest wspólne napięcie, a dodają się <b>prądy</b>: prąd przez cewkę i prąd przez kondensator są w przeciwfazie i kasują się w gałęzi zasilającej. Prąd krąży w pętli L–C, a ze źródła prawie nic nie pobiera. Widziana z zacisków impedancja skacze do maksimum — <b>duża oporność</b>. Obwód równoległy w rezonansie to <b>przerwa</b> dla f<sub>0</sub>.</li>
+    </ul>
+    <p>Egzaminacyjne sformułowanie, którego się trzymaj: <b>równoległy w rezonansie przedstawia dużą oporność, szeregowy małą.</b></p>
+  </div>
+</div>
+</div>
+</section>
+
+<!-- ============ 5. Q I PASMO ============ -->
+<section id="sec5" hidden>
+<h2>5. Dobroć Q: jak wąskie jest okno</h2>
+<p>Q widziałeś już jako „ostrość” krzywej. Teraz nadajmy jej liczbę. Poniżej rysuję krzywą odpowiedzi obwodu (jak mocno przepuszcza sygnał o danej częstotliwości) i zaznaczam <b>szerokość pasma B</b> — odcinek między punktami, gdzie odpowiedź spada do 0,707 wartości szczytowej (to jest właśnie −3 dB).</p>
+
+<div class="panel">
+  <span class="step-tag">Zakład 3 z 4</span>
+  <p>Obwód rezonansowy na <b>f<sub>0</sub> = 14 MHz</b> ma <b>Q = 100</b>. Jak szerokie będzie jego pasmo? Wpisz liczbę w kHz.</p>
+  <p><input type="number" id="gCin" placeholder="np. 25" aria-label="Twoje przewidywanie pasma w kHz"> kHz
+     <button id="gCsubmit" disabled>Zatwierdzam</button></p>
+  <div id="gCout" class="hidden"></div>
+</div>
+
+<div id="sec5b" hidden>
+<div class="panel">
+  <canvas id="cv3" height="300" aria-label="Krzywa rezonansowa z zaznaczoną szerokością pasma"></canvas>
+  <div class="readout" id="ro3" aria-live="polite"></div>
+  <div class="ctrl"><label for="sQ2">Dobroć Q</label><input type="range" id="sQ2" min="5" max="300" value="40"><span class="val" id="vQ2"></span></div>
+  <div class="choices">
+    <button id="btnExam">przypadek egzaminacyjny: 14 MHz, Q = 100</button>
+    <button id="btnAM">p.cz. odbiornika AM: 455 kHz</button>
+  </div>
+  <div class="ctrl"><label for="chkAM" style="min-width:auto">
+    <input type="checkbox" id="chkAM"> pokaż sygnał AM (wstęga ±4,5 kHz)</label></div>
+  <div id="amVerdict" class="hidden verdict"></div>
+</div>
+
+<div class="panel">
+  <span class="step-tag">Zapis tego, co widzisz</span>
+  <p class="formula">B = f<sub>0</sub> / Q &nbsp;&nbsp;→&nbsp;&nbsp; 14 MHz / 100 = 140 kHz</p>
+  <p>Q jest bezwymiarowe. Można je czytać na trzy równoważne sposoby, wszystkie trzy przydają się na egzaminie:</p>
+  <ul>
+    <li><b>ostrość</b>: Q = f<sub>0</sub>/B — ile razy pasmo jest węższe od częstotliwości środkowej,</li>
+    <li><b>stosunek reaktancji do strat</b>: Q = X<sub>0</sub>/R<sub>s</sub> (obwód szeregowy) — im mniejsza rezystancja strat, tym wyższe Q,</li>
+    <li><b>przebicie napięcia</b>: w rezonansie szeregowym napięcie na cewce jest <b>Q razy większe</b> niż napięcie źródła.</li>
+  </ul>
+</div>
+
+<div class="panel">
+  <span class="step-tag">Trzeci błąd do wybicia z głowy</span>
+  <p><b>„Wyższe Q jest zawsze lepsze” — nie.</b> Włącz wyżej wstęgę AM i podkręć Q przy 455 kHz. Sygnał AM z modulacją akustyczną do 4,5 kHz zajmuje <b>około 9 kHz</b> szerokości. Filtr p.cz. o Q = 50 daje B = 9,1 kHz — akurat. Filtr o Q = 200 daje B = 2,3 kHz: nośna przechodzi, ale wysokie tony wstęg bocznych są tłumione. Odbiór staje się głuchy i bulgoczący. Wysokie Q kupujesz selektywnością, płacisz pasmem.</p>
+  <div class="aside"><b>Analogia z twojej działki (i tylko jedna, żeby nie zaśmiecać):</b> filtr p.cz. to rate limiter z wąskim kluczem selekcji. Q to ostrość klucza. Zawężasz okno poniżej szerokości ruchu, który ma przejść — i odrzucasz nie tylko sąsiada, ale i część własnego sygnału. Selektywność i przepustowość handlujesz jedną gałką.</div>
+</div>
+</div>
+</section>
+
+<!-- ============ 6. PRAWO 1/√(LC) ============ -->
+<section id="sec6" hidden>
+<h2>6. Pierwiastek: co robi f<sub>0</sub>, gdy zmienisz C cztery razy</h2>
+<p>To jest gotowe pytanie egzaminacyjne, tylko w innym przebraniu. Najpierw zakład, potem klikasz.</p>
+
+<div class="panel">
+  <span class="step-tag">Zakład 4 z 4</span>
+  <p>Zwiększam pojemność C <b>czterokrotnie</b>, L zostaje bez zmian. Częstotliwość rezonansowa zmieni się:</p>
+  <div class="choices" id="gD">
+    <button data-v="d4">4 razy w dół</button>
+    <button data-v="d2">2 razy w dół</button>
+    <button data-v="u2">2 razy w górę</button>
+    <button data-v="u4">4 razy w górę</button>
+  </div>
+  <button id="gDsubmit" disabled>Zatwierdzam</button>
+  <div id="gDout" class="hidden"></div>
+</div>
+
+<div id="sec6b" hidden>
+<div class="panel">
+  <p>Klikaj — po każdej zmianie pokazuję f<sub>0</sub> przed i po. Wykres z sekcji 3 zmienia się razem z tym.</p>
+  <div class="choices">
+    <button data-op="C4">C × 4</button><button data-op="Cd4">C ÷ 4</button>
+    <button data-op="C2">C × 2</button><button data-op="L4">L × 4</button><button data-op="Ld4">L ÷ 4</button>
+    <button data-op="rst">reset (1 µH, 129 pF)</button>
+  </div>
+  <div class="readout" id="ro4" aria-live="polite">Kliknij dowolny przycisk.</div>
+</div>
+<div class="panel">
+  <span class="step-tag">Zapis</span>
+  <p class="formula">f<sub>0</sub> ~ 1/√(LC)</p>
+  <p>Pierwiastek zjada połowę zmiany: <b>C razy 4 → f<sub>0</sub> dwa razy w dół</b>. Odwrotnie: żeby <b>podwoić</b> f<sub>0</sub>, potrzebujesz pojemności <b>czterokrotnie mniejszej</b>. Egzamin lubi tę drugą wersję zdania.</p>
+  <p>Przy okazji — łączenie elementów, bo to ta sama rodzina pytań:</p>
+  <ul>
+    <li><b>Kondensatory równolegle</b>: pojemności się <b>dodają</b> (C = C₁ + C₂). Szeregowo — wypadkowa <b>maleje</b> (jak rezystory równolegle).</li>
+    <li><b>Cewki</b>: odwrotnie. <b>Szeregowo się dodają</b> (L = L₁ + L₂), równolegle wypadkowa maleje.</li>
+  </ul>
+</div>
+</div>
+</section>
+
+<!-- ============ 7. REAKTANCJA NIE GRZEJE ============ -->
+<section id="sec7" hidden>
+<h2>7. Reaktancja ma omy, ale nie grzeje</h2>
+<p>Drugi błąd z listy. Rysuję przebiegi w czasie: napięcie, prąd i moc chwilową p = u·i, dla trzech różnych elementów. Przełączaj i patrz na <b>moc średnią</b> (przerywana linia).</p>
+<div class="panel">
+  <div class="choices">
+    <button data-el="R" class="sel">rezystor R</button><button data-el="L">cewka L</button><button data-el="C">kondensator C</button>
+  </div>
+  <canvas id="cv4" height="260" aria-label="Przebiegi napięcia, prądu i mocy chwilowej"></canvas>
+  <div class="readout" id="ro5" aria-live="polite"></div>
+</div>
+<div class="panel">
+  <p>Na rezystorze moc chwilowa nigdy nie schodzi poniżej zera — energia idzie w jedną stronę, zamienia się w ciepło, średnia jest dodatnia. Na cewce i kondensatorze moc chwilowa jest <b>na przemian dodatnia i ujemna</b>: przez ćwierć okresu element pobiera energię (do pola magnetycznego cewki albo elektrycznego kondensatora), przez następną ćwiartkę <b>oddaje ją z powrotem</b> do źródła. Średnia = 0.</p>
+  <p>Dlatego: <b>reaktancja przesuwa energię, rezystancja ją zjada.</b> Moc czynną liczysz tylko na R (P = I<sub>sk</sub>²R). I dlatego Q obwodu psuje wyłącznie rezystancja strat — gdyby cewka była idealna, Q byłoby nieskończone, a pasmo zerowe.</p>
+</div>
+</section>
+
+<!-- ============ 8. RETRIEVAL ============ -->
+<section id="sec8" hidden>
+<h2>8. Odtwórz z pamięci (bez zaglądania w górę)</h2>
+<p>Trzy pytania otwarte. Napisz odpowiedź <b>zanim</b> odsłonisz wzorzec — przycisk włącza się dopiero, gdy coś napiszesz. To nie test, to trening przypominania: samo próbowanie, nawet nieudane, robi robotę.</p>
+
+<div class="panel">
+  <span class="step-tag">Przypomnienie 1 — sedno węzła</span>
+  <p><b>Jak zmienia się reaktancja cewki i kondensatora z częstotliwością, co dzieje się z impedancją obwodu szeregowego i równoległego w rezonansie i jak z Q wyznaczyć pasmo?</b></p>
+  <textarea id="r1" placeholder="Z pamięci. Pełnym zdaniem."></textarea>
+  <p><button class="revBtn" data-for="r1" disabled>Pokaż wzorcową odpowiedź</button></p>
+  <div id="r1out" class="hidden verdict">
+    <p>X<sub>L</sub> = 2πfL — rośnie z częstotliwością. X<sub>C</sub> = 1/(2πfC) — maleje. Przecinają się przy f<sub>0</sub> = 1/(2π√(LC)) i to jest rezonans. W rezonansie obwód <b>szeregowy ma minimum impedancji</b> (zostaje sama rezystancja strat — duży prąd), a <b>równoległy maksimum</b>, czyli dużą oporność (prąd krąży w pętli LC, źródło prawie nie jest obciążane). Pasmo: B = f<sub>0</sub>/Q — im wyższe Q, tym węższe pasmo. Dla 14 MHz i Q = 100 wychodzi 140 kHz.</p>
+  </div>
+</div>
+
+<div class="panel">
+  <span class="step-tag">Przypomnienie 2 — połączenie z prądem zmiennym i mocą</span>
+  <p><b>Na czystej reaktancji płynie prąd i jest na niej napięcie — a mimo to moc czynna wynosi zero. Wyjaśnij dlaczego, i powiedz, jakie wartości napięcia i prądu (chwilowe? skuteczne? szczytowe?) wstawia się do wzoru na moc czynną.</b></p>
+  <textarea id="r2" placeholder="Z pamięci."></textarea>
+  <p><button class="revBtn" data-for="r2" disabled>Pokaż wzorcową odpowiedź</button></p>
+  <div id="r2out" class="hidden verdict">
+    <p>Bo na czystej reaktancji prąd jest przesunięty względem napięcia o 90°: przez połowę okresu iloczyn u·i jest dodatni (element pobiera energię do pola), przez drugą połowę ujemny (oddaje ją do źródła). Średnia z okresu = 0 — energia się kołysze, nic nie zostaje zamienione w ciepło. Do mocy czynnej wstawia się <b>wartości skuteczne</b> (RMS): P = U<sub>sk</sub>·I<sub>sk</sub>·cos φ, a dla czystej reaktancji cos 90° = 0. Dla sinusoidy U<sub>sk</sub> = U<sub>szczyt</sub>/√2. Moc rozprasza wyłącznie składowa rezystancyjna.</p>
+  </div>
+</div>
+
+<div class="panel">
+  <span class="step-tag">Przypomnienie 3 — rachunek egzaminacyjny</span>
+  <p><b>(a) f<sub>0</sub> = 14 MHz, Q = 100 — ile wynosi pasmo? (b) Chcesz podwoić f<sub>0</sub> nie ruszając cewki — co robisz z pojemnością i o ile? (c) Filtr p.cz. w odbiorniku AM — jakiego rzędu pasmo jest potrzebne i co się psuje przy zbyt wysokim Q?</b></p>
+  <textarea id="r3" placeholder="Z pamięci, trzy krótkie odpowiedzi."></textarea>
+  <p><button class="revBtn" data-for="r3" disabled>Pokaż wzorcową odpowiedź</button></p>
+  <div id="r3out" class="hidden verdict">
+    <p>(a) B = f<sub>0</sub>/Q = 14 MHz / 100 = <b>140 kHz</b>.<br>
+       (b) f<sub>0</sub> ~ 1/√(LC), więc dwukrotny wzrost f<sub>0</sub> wymaga <b>czterokrotnie mniejszej pojemności</b>.<br>
+       (c) Dla AM potrzeba pasma <b>rzędu 9 kHz</b> (nośna ± 4,5 kHz modulacji). Zbyt wysokie Q daje pasmo węższe niż wstęgi boczne — filtr obcina wysokie tony modulacji, dźwięk robi się głuchy.</p>
+  </div>
+</div>
+</section>
+
+<!-- ============ 9. PUSTA KARTKA ============ -->
+<section id="sec9" hidden>
+<h2>9. Pusta kartka</h2>
+<div class="panel">
+  <p><b>Zamknij albo zasłoń tę stronę.</b> Na czystej kartce odtwórz szkielet całego rozumowania w pięciu krokach: od tego, dlaczego reaktancja w ogóle zależy od częstotliwości, aż do tego, dlaczego wyższe Q potrafi zepsuć odbiór AM. Dopiero potem kliknij.</p>
+  <textarea id="bp" placeholder="Pięć kroków, hasłowo albo pełnym zdaniem — jak wolisz."></textarea>
+  <p><button class="revBtn" data-for="bp" disabled>Pokaż szkielet do porównania</button></p>
+  <div id="bpout" class="hidden verdict">
+    <ol>
+      <li><b>Reaktancja zależy od f.</b> Cewka przeciwstawia się zmianom prądu — im szybsze zmiany, tym większy opór: X<sub>L</sub> = 2πfL rośnie. Kondensator odwrotnie: im szybsze zmiany, tym łatwiej się przeładowuje — X<sub>C</sub> = 1/(2πfC) maleje.</li>
+      <li><b>Krzywe muszą się przeciąć.</b> Punkt przecięcia X<sub>L</sub> = X<sub>C</sub> to rezonans: f<sub>0</sub> = 1/(2π√(LC)). Pierwiastek → C razy 4 zmienia f<sub>0</sub> tylko dwa razy (w drugą stronę).</li>
+      <li><b>Sposób połączenia decyduje o znaku efektu.</b> Szeregowo kasują się napięcia → minimum impedancji (mały opór, duży prąd). Równolegle kasują się prądy → maksimum impedancji (duża oporność).</li>
+      <li><b>Straty ustalają Q.</b> Q = X<sub>0</sub>/R<sub>s</sub>; jedyne, co rozprasza moc, to rezystancja — reaktancja tylko przerzuca energię tam i z powrotem (moc średnia 0).</li>
+      <li><b>Q ustala pasmo: B = f<sub>0</sub>/Q.</b> Wyższe Q = ostrzejsza selekcja, ale węższe okno. 14 MHz przy Q = 100 → 140 kHz. Filtr AM potrzebuje ~9 kHz; zbyt wysokie Q obcina wstęgi boczne i zabija wysokie tony.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="panel">
+  <p><b>Powiedz Engramowi swoje odpowiedzi z pytań odtworzeniowych następnym razem, gdy będziecie rozmawiać — staną się częścią twojego harmonogramu powtórek.</b></p>
+  <p class="locknote">(Tell Engram your two retrieval answers next time you talk — they become part of your schedule.)</p>
+</div>
+</section>
+
+</main>
+
+<script>
+"use strict";
+/* ---------- narzędzia ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const TAU = Math.PI*2;
+const num = (v,d=2)=> (Math.abs(v)<1e-12?0:v).toFixed(d).replace('.',',');
+function fHz(f){
+  if(f>=1e6) return num(f/1e6, f/1e6<10?3:2)+' MHz';
+  if(f>=1e3) return num(f/1e3, f/1e3<10?2:1)+' kHz';
+  return num(f,1)+' Hz';
+}
+function ohm(x){
+  if(x>=1e6) return num(x/1e6,2)+' MΩ';
+  if(x>=1e3) return num(x/1e3,2)+' kΩ';
+  if(x>=1)   return num(x,1)+' Ω';
+  return num(x,3)+' Ω';
+}
+function henry(L){
+  if(L>=1e-3) return num(L*1e3,2)+' mH';
+  return num(L*1e6,2)+' µH';
+}
+function farad(C){
+  if(C>=1e-9) return num(C*1e9,2)+' nF';
+  return num(C*1e12,1)+' pF';
+}
+const XL = (f,L)=> TAU*f*L;
+const XC = (f,C)=> 1/(TAU*f*C);
+const F0 = (L,C)=> 1/(TAU*Math.sqrt(L*C));
+
+/* stan globalny */
+const S = { L:1e-6, C:129.2e-12, f:14e6, Q:40, mode:'ser', am:false, el:'R' };
+
+/* motyw */
+const tb = $('#themeBtn');
+tb.addEventListener('click', ()=>{
+  const cur = document.documentElement.getAttribute('data-theme');
+  const dark = cur==='dark' || (cur==='auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', dark?'light':'dark');
+  drawAll();
+});
+function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+/* płótno */
+function prep(cv){
+  const dpr = window.devicePixelRatio||1;
+  if(!cv.dataset.h) cv.dataset.h = cv.getAttribute('height');   /* wysokość CSS zapamiętana raz — atrybut height nadpisuje DPR */
+  const w = cv.clientWidth || 700, h = parseInt(cv.dataset.h,10);
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+  cv.style.height = h+'px';
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+function axes(ctx,w,h,pad){
+  ctx.strokeStyle = css('--line'); ctx.lineWidth=1;
+  ctx.strokeRect(pad.l+.5,pad.t+.5,w-pad.l-pad.r,h-pad.t-pad.b);
+}
+
+/* ================= WYKRES 1: reaktancje ================= */
+const FMIN=1e5, FMAX=1e9, YMIN=0.05, YMAX=1e5;
+function px1(f,w,pad){ return pad.l + (Math.log10(f)-Math.log10(FMIN))/(Math.log10(FMAX)-Math.log10(FMIN))*(w-pad.l-pad.r); }
+function py1(y,h,pad){ const yy=Math.min(YMAX,Math.max(YMIN,y));
+  return (h-pad.b) - (Math.log10(yy)-Math.log10(YMIN))/(Math.log10(YMAX)-Math.log10(YMIN))*(h-pad.t-pad.b); }
+
+function draw1(){
+  const cv=$('#cv1'); if(!cv || !cv.clientWidth) return;
+  const {ctx,w,h}=prep(cv); const pad={l:52,r:14,t:14,b:34};
+  ctx.font='11px '+css('--mono'); ctx.textBaseline='middle';
+  /* siatka */
+  ctx.strokeStyle=css('--grid'); ctx.fillStyle=css('--ink-dim'); ctx.lineWidth=1;
+  for(let d=Math.log10(FMIN); d<=Math.log10(FMAX)+.001; d++){
+    const x=px1(Math.pow(10,d),w,pad);
+    ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,h-pad.b); ctx.stroke();
+    ctx.textAlign='center'; ctx.fillText(fHz(Math.pow(10,d)),x,h-pad.b+16);
+  }
+  for(let d=Math.log10(YMIN); d<=Math.log10(YMAX)+.001; d++){
+    const v=Math.pow(10,d); const y=py1(v,h,pad);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    ctx.textAlign='right'; ctx.fillText(ohm(v),pad.l-6,y);
+  }
+  axes(ctx,w,h,pad);
+  /* krzywe */
+  const line=(fn,color)=>{
+    ctx.strokeStyle=color; ctx.lineWidth=2.4; ctx.beginPath();
+    for(let x=pad.l;x<=w-pad.r;x+=1){
+      const t=(x-pad.l)/(w-pad.l-pad.r);
+      const f=Math.pow(10, Math.log10(FMIN)+t*(Math.log10(FMAX)-Math.log10(FMIN)));
+      const y=py1(fn(f),h,pad);
+      x===pad.l?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  };
+  line(f=>XL(f,S.L), css('--xl'));
+  line(f=>XC(f,S.C), css('--xc'));
+  /* f0 */
+  const f0=F0(S.L,S.C), x0=px1(f0,w,pad), y0=py1(XL(f0,S.L),h,pad);
+  ctx.setLineDash([4,4]); ctx.strokeStyle=css('--accent'); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(x0,pad.t); ctx.lineTo(x0,h-pad.b); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=css('--accent'); ctx.beginPath(); ctx.arc(x0,y0,5.5,0,TAU); ctx.fill();
+  ctx.textAlign=(x0>w-110)?'right':'left'; ctx.font='bold 12px '+css('--mono');
+  ctx.fillText('f₀ = '+fHz(f0), x0+(x0>w-110?-8:8), pad.t+12);
+  /* znacznik f */
+  const xf=px1(S.f,w,pad);
+  ctx.strokeStyle=css('--ink'); ctx.lineWidth=1.5; ctx.globalAlpha=.55;
+  ctx.beginPath(); ctx.moveTo(xf,pad.t); ctx.lineTo(xf,h-pad.b); ctx.stroke(); ctx.globalAlpha=1;
+  ctx.fillStyle=css('--xl'); ctx.beginPath(); ctx.arc(xf,py1(XL(S.f,S.L),h,pad),4,0,TAU); ctx.fill();
+  ctx.fillStyle=css('--xc'); ctx.beginPath(); ctx.arc(xf,py1(XC(S.f,S.C),h,pad),4,0,TAU); ctx.fill();
+  /* odczyt */
+  const xl=XL(S.f,S.L), xc=XC(S.f,S.C);
+  let kind = Math.abs(xl-xc)/Math.max(xl,xc) < 0.02 ? 'REZONANS — reaktancje równe'
+           : (xl>xc ? 'przeważa cewka → obwód zachowuje się indukcyjnie'
+                    : 'przeważa kondensator → obwód zachowuje się pojemnościowo');
+  $('#ro1').textContent = 'f = '+fHz(S.f)+'   ·   X_L = '+ohm(xl)+'   ·   X_C = '+ohm(xc)+'   ·   f₀ = '+fHz(f0)+'\n'+kind;
+  $('#ro1').style.whiteSpace='pre-line';
+}
+
+/* ================= WYKRES 2: szeregowy vs równoległy ================= */
+function draw2(){
+  const cv=$('#cv2'); if(!cv || !cv.clientWidth || cv.offsetParent===null) return;
+  const {ctx,w,h}=prep(cv); const pad={l:56,r:14,t:14,b:34};
+  const f0=F0(S.L,S.C), X0=TAU*f0*S.L;
+  const Rs=X0/S.Q, Rp=S.Q*X0;
+  const fa=f0/6, fb=f0*6;
+  const yMin=Math.max(0.01,Rs/3), yMax=Rp*3;
+  const PX=f=>pad.l+(Math.log10(f)-Math.log10(fa))/(Math.log10(fb)-Math.log10(fa))*(w-pad.l-pad.r);
+  const PY=v=>{const q=Math.min(yMax,Math.max(yMin,v));
+    return (h-pad.b)-(Math.log10(q)-Math.log10(yMin))/(Math.log10(yMax)-Math.log10(yMin))*(h-pad.t-pad.b);};
+  ctx.font='11px '+css('--mono'); ctx.textBaseline='middle';
+  ctx.strokeStyle=css('--grid'); ctx.fillStyle=css('--ink-dim');
+  for(let d=Math.ceil(Math.log10(fa)); d<=Math.log10(fb); d++){
+    const x=PX(Math.pow(10,d));
+    ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,h-pad.b); ctx.stroke();
+    ctx.textAlign='center'; ctx.fillText(fHz(Math.pow(10,d)),x,h-pad.b+16);
+  }
+  for(let d=Math.ceil(Math.log10(yMin)); d<=Math.log10(yMax); d++){
+    const y=PY(Math.pow(10,d));
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    ctx.textAlign='right'; ctx.fillText(ohm(Math.pow(10,d)),pad.l-6,y);
+  }
+  axes(ctx,w,h,pad);
+  const zSer=f=>{const d=XL(f,S.L)-XC(f,S.C); return Math.sqrt(Rs*Rs+d*d);};
+  const zPar=f=>{const b=1/XC(f,S.C)-1/XL(f,S.L); return 1/Math.sqrt(1/(Rp*Rp)+b*b);};
+  const line=(fn,color,active)=>{
+    ctx.strokeStyle=color; ctx.lineWidth=active?2.8:1.6; ctx.globalAlpha=active?1:.28;
+    ctx.beginPath();
+    const N=(w-pad.l-pad.r)*4;
+    for(let i=0;i<=N;i++){
+      const t=i/N, f=Math.pow(10, Math.log10(fa)+t*(Math.log10(fb)-Math.log10(fa)));
+      const x=PX(f), y=PY(fn(f));
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke(); ctx.globalAlpha=1;
+  };
+  line(zSer,css('--ser'),S.mode==='ser');
+  line(zPar,css('--par'),S.mode==='par');
+  /* f0 */
+  const x0=PX(f0);
+  ctx.setLineDash([4,4]); ctx.strokeStyle=css('--accent'); ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(x0,pad.t); ctx.lineTo(x0,h-pad.b); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=css('--accent'); ctx.font='bold 12px '+css('--mono'); ctx.textAlign='center';
+  ctx.fillText('f₀',x0,h-pad.b-8);
+  const active=S.mode==='ser'?zSer:zPar, col=S.mode==='ser'?css('--ser'):css('--par');
+  ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x0,PY(active(f0)),6,0,TAU); ctx.fill();
+  ctx.textAlign=x0>w/2?'right':'left';
+  ctx.fillText(S.mode==='ser'?'MINIMUM: |Z| = '+ohm(Rs):'MAKSIMUM: |Z| = '+ohm(Rp), x0+(x0>w/2?-12:12), PY(active(f0))+(S.mode==='ser'?18:-18));
+  $('#ro2').textContent =
+    (S.mode==='ser'?'SZEREGOWY':'RÓWNOLEGŁY')+'   ·   f₀ = '+fHz(f0)+'   ·   X_L = X_C = '+ohm(X0)+' w rezonansie\n'+
+    'szeregowy w f₀: |Z| = '+ohm(Rs)+' (minimum, duży prąd)   ·   równoległy w f₀: |Z| = '+ohm(Rp)+' (maksimum, duża oporność)';
+  $('#ro2').style.whiteSpace='pre-line';
+}
+
+/* ================= WYKRES 3: krzywa rezonansowa i pasmo ================= */
+function draw3(){
+  const cv=$('#cv3'); if(!cv || !cv.clientWidth || cv.offsetParent===null) return;
+  const {ctx,w,h}=prep(cv); const pad={l:50,r:16,t:16,b:36};
+  const f0=F0(S.L,S.C), B=f0/S.Q;
+  const span=f0*0.05, fa=f0-span, fb=f0+span;
+  const PX=f=>pad.l+(f-fa)/(fb-fa)*(w-pad.l-pad.r);
+  const PY=a=>(h-pad.b)-a*(h-pad.t-pad.b);
+  const A=f=>{const x=f/f0-f0/f; return 1/Math.sqrt(1+S.Q*S.Q*x*x);};
+  ctx.font='11px '+css('--mono'); ctx.textBaseline='middle';
+  /* siatka pionowa co 1% f0 */
+  ctx.strokeStyle=css('--grid'); ctx.fillStyle=css('--ink-dim');
+  for(let k=-5;k<=5;k++){
+    const f=f0*(1+k/100), x=PX(f);
+    ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,h-pad.b); ctx.stroke();
+    if(k%2===0){ ctx.textAlign='center'; ctx.fillText(k===0?'f₀':(k>0?'+':'')+k+'%',x,h-pad.b+16); }
+  }
+  [0,.25,.5,.707,1].forEach(a=>{
+    const y=PY(a); ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    ctx.textAlign='right'; ctx.fillText(a===.707?'0,707':num(a,2),pad.l-6,y);
+  });
+  /* pasmo B */
+  const bl=PX(f0-B/2), br=PX(f0+B/2);
+  ctx.fillStyle=css('--shade'); ctx.fillRect(Math.max(pad.l,bl),pad.t,Math.min(w-pad.r,br)-Math.max(pad.l,bl),h-pad.t-pad.b);
+  /* wstęgi AM */
+  if(S.am){
+    const sl=PX(f0-4500), sr=PX(f0+4500);
+    ctx.strokeStyle=css('--bad'); ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+    [sl,sr].forEach(x=>{ if(x>pad.l&&x<w-pad.r){ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,h-pad.b);ctx.stroke();} });
+    ctx.setLineDash([]); ctx.fillStyle=css('--bad'); ctx.textAlign='center'; ctx.font='bold 11px '+css('--mono');
+    if(sr>pad.l&&sr<w-pad.r) ctx.fillText('+4,5 kHz',sr,pad.t+10);
+    if(sl>pad.l&&sl<w-pad.r) ctx.fillText('−4,5 kHz',sl,pad.t+10);
+  }
+  axes(ctx,w,h,pad);
+  /* krzywa */
+  ctx.strokeStyle=css('--accent'); ctx.lineWidth=2.8; ctx.beginPath();
+  const N=(w-pad.l-pad.r)*4;
+  for(let i=0;i<=N;i++){
+    const f=fa+(fb-fa)*i/N, x=PX(f), y=PY(A(f));
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+  /* linia -3 dB */
+  ctx.strokeStyle=css('--ink-dim'); ctx.setLineDash([3,4]); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(pad.l,PY(.707)); ctx.lineTo(w-pad.r,PY(.707)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=css('--ink-dim'); ctx.textAlign='left'; ctx.font='11px '+css('--mono');
+  ctx.fillText('−3 dB',pad.l+6,PY(.707)-10);
+  /* etykieta B */
+  ctx.fillStyle=css('--accent'); ctx.font='bold 12px '+css('--mono'); ctx.textAlign='center';
+  ctx.fillText('B = '+fHz(B),Math.min(w-60,Math.max(60,PX(f0))),PY(.707)+18);
+
+  const att=20*Math.log10(A(f0+4500));
+  $('#ro3').textContent='f₀ = '+fHz(f0)+'   ·   Q = '+S.Q+'   ·   B = f₀/Q = '+fHz(B);
+  const av=$('#amVerdict');
+  if(S.am){
+    av.classList.remove('hidden');
+    const okAM = B>=9000;
+    av.innerHTML = okAM
+      ? '<b class="ok">Pasmo '+fHz(B)+' ≥ 9 kHz</b> — cała wstęga AM (nośna ±4,5 kHz) mieści się w oknie. Tłumienie skrajnego tonu: '+num(att,1)+' dB. Audio przechodzi w całości.'
+      : '<b class="bad">Pasmo '+fHz(B)+' &lt; 9 kHz</b> — wstęgi boczne wystają poza okno filtru. Ton 4,5 kHz jest tłumiony o <b>'+num(Math.abs(att),1)+' dB</b>: wysokie tony znikają, odbiór robi się głuchy. Wyższe Q <b>nie</b> jest tu lepsze.';
+  } else av.classList.add('hidden');
+}
+
+/* ================= WYKRES 4: moc chwilowa ================= */
+function draw4(){
+  const cv=$('#cv4'); if(!cv || !cv.clientWidth || cv.offsetParent===null) return;
+  const {ctx,w,h}=prep(cv); const pad={l:46,r:14,t:14,b:28};
+  const phi = S.el==='R'?0 : (S.el==='L'? Math.PI/2 : -Math.PI/2);
+  const PX=t=>pad.l+t/2*(w-pad.l-pad.r);             /* t w okresach, 0..2 */
+  const PY=v=>(pad.t+(h-pad.t-pad.b)/2) - v*(h-pad.t-pad.b)/2/1.15;
+  ctx.font='11px '+css('--mono'); ctx.textBaseline='middle';
+  ctx.strokeStyle=css('--grid'); ctx.fillStyle=css('--ink-dim');
+  [-1,-0.5,0,0.5,1].forEach(v=>{ const y=PY(v);
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+    ctx.textAlign='right'; ctx.fillText(num(v,1),pad.l-6,y); });
+  for(let k=0;k<=2;k+=0.5){ const x=PX(k);
+    ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,h-pad.b); ctx.stroke();
+    ctx.textAlign='center'; ctx.fillText(k+'T',x,h-pad.b+14); }
+  axes(ctx,w,h,pad);
+  const curve=(fn,color,wdt,dash)=>{
+    ctx.strokeStyle=color; ctx.lineWidth=wdt; ctx.setLineDash(dash||[]); ctx.beginPath();
+    for(let i=0;i<=600;i++){ const t=i/600*2, x=PX(t), y=PY(fn(t));
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  const u=t=>Math.sin(TAU*t), ii=t=>Math.sin(TAU*t-phi), p=t=>u(t)*ii(t);
+  curve(u,css('--xc'),1.6,[5,4]);
+  curve(ii,css('--xl'),1.6,[2,3]);
+  curve(p,css('--accent'),2.8);
+  const avg = S.el==='R'?0.5:0;
+  ctx.strokeStyle=css(S.el==='R'?'--ok':'--ink-dim'); ctx.lineWidth=2; ctx.setLineDash([7,5]);
+  ctx.beginPath(); ctx.moveTo(pad.l,PY(avg)); ctx.lineTo(w-pad.r,PY(avg)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=css(S.el==='R'?'--ok':'--ink'); ctx.textAlign='left'; ctx.font='bold 11px '+css('--mono');
+  ctx.fillText('moc średnia = '+num(avg,2),pad.l+8,PY(avg)-12);
+  $('#ro5').textContent =
+    (S.el==='R'?'REZYSTOR: prąd w fazie z napięciem. Moc chwilowa nigdy nie jest ujemna → średnia dodatnia → element się grzeje.'
+     :S.el==='L'?'CEWKA: prąd opóźniony o 90°. Moc chwilowa na przemian + i − → energia idzie do pola magnetycznego i wraca. Średnia = 0.'
+     :'KONDENSATOR: prąd wyprzedza napięcie o 90°. Moc chwilowa na przemian + i − → energia idzie do pola elektrycznego i wraca. Średnia = 0.')
+    +'\n(przerywana niebieska: napięcie · kropkowana pomarańczowa: prąd · gruba: moc chwilowa u·i)';
+  $('#ro5').style.whiteSpace='pre-line';
+}
+
+function drawAll(){ draw1(); draw2(); draw3(); draw4(); }
+
+/* ================= BRAMKA A ================= */
+let gA={l:null,c:null};
+function wireChoice(sel, cb){
+  $$(sel+' button').forEach(b=>b.addEventListener('click',()=>{
+    $$(sel+' button').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel'); cb(b.dataset.v);
+  }));
+}
+wireChoice('#gA1', v=>{gA.l=v; $('#gAsubmit').disabled = !(gA.l&&gA.c);});
+wireChoice('#gA2', v=>{gA.c=v; $('#gAsubmit').disabled = !(gA.l&&gA.c);});
+const NAME={ros:'rośnie',mal:'maleje',brak:'nie zmienia się'};
+$('#gAsubmit').addEventListener('click',()=>{
+  const okL=gA.l==='ros', okC=gA.c==='mal';
+  $('#gAout').classList.remove('hidden');
+  $('#gAout').innerHTML='<div class="verdict"><p>Powiedziałeś: <b>cewka '+NAME[gA.l]+'</b> — '+
+    (okL?'<span class="ok">trafione ✓</span>':'<span class="bad">nie ✗</span>')+
+    '; <b>kondensator '+NAME[gA.c]+'</b> — '+(okC?'<span class="ok">trafione ✓</span>':'<span class="bad">nie ✗</span>')+'.</p>'+
+    '<p>Jest tak: <b>opór cewki rośnie</b> z częstotliwością, <b>opór kondensatora maleje</b>. Cewka broni się przed zmianami prądu — im szybsze zmiany, tym mocniej się broni. Kondensator odwrotnie: im szybciej przeładowujesz, tym łatwiej przepuszcza. Ten opór nazywa się <b>reaktancją</b> i oznacza literą X.</p>'+
+    (okL&&okC?'<p>Skoro jedna krzywa rośnie, a druga maleje — <b>muszą się gdzieś przeciąć</b>. To przecięcie ma nazwę i cała reszta strony jest o tym, co się w nim dzieje.</p>':'')+
+    '</div>';
+  $('#gAsubmit').disabled=true;
+  $('#sec2').hidden=false;
+  startStepper();
+  requestAnimationFrame(()=>{drawAll(); $('#sec2').scrollIntoView({behavior:'smooth',block:'start'});});
+});
+
+/* ================= WORKED DRIVE ================= */
+const STEPS=[
+  { f:1.4e6, tag:'Przejazd 1 z 3 — nisko',
+    q:'Ustawiam f = 1,4 MHz (dziesięć razy niżej niż docelowo). Który element stawia teraz <b>większy</b> opór?',
+    ch:[['l','cewka'],['c','kondensator'],['e','oba tyle samo']], correct:'c',
+    exp:'X_L = 2π·1,4 MHz·1 µH ≈ <b>8,8 Ω</b> — cewka prawie nie przeszkadza. X_C = 1/(2π·1,4 MHz·129 pF) ≈ <b>881 Ω</b> — kondensator blokuje. Nisko rządzi kondensator; obwód jest <b>pojemnościowy</b>.' },
+  { f:14e6, tag:'Przejazd 2 z 3 — środek',
+    q:'Podnoszę do f = 14 MHz. Co dzieje się z obiema reaktancjami?',
+    ch:[['l','cewka nadal mniejsza'],['e','zrównują się'],['c','kondensator nadal mniejszy']], correct:'e',
+    exp:'X_L ≈ <b>88 Ω</b> i X_C ≈ <b>88 Ω</b> — krzywe właśnie się przecięły. To jest <b>f₀, częstotliwość rezonansowa</b>. Stąd te „przypadkowe” 129 pF: dobrane tak, żeby przecięcie wypadło na 14 MHz — w środku pasma 20 m.' },
+  { f:140e6, tag:'Przejazd 3 z 3 — wysoko',
+    q:'Jeszcze dziesięć razy wyżej: f = 140 MHz. Kto teraz stawia większy opór?',
+    ch:[['l','cewka'],['c','kondensator'],['e','oba tyle samo']], correct:'l',
+    exp:'X_L ≈ <b>880 Ω</b>, X_C ≈ <b>8,8 Ω</b> — role się odwróciły. Wysoko rządzi cewka; obwód jest <b>indukcyjny</b>. Zapamiętaj kształt: <b>poniżej f₀ pojemnościowy, powyżej f₀ indukcyjny, w f₀ czysto rezystancyjny</b>.' }
+];
+let si=0;
+function startStepper(){ si=0; renderStep(); }
+function renderStep(){
+  const s=STEPS[si];
+  S.f=s.f; draw1();
+  $('#stepTag').textContent=s.tag;
+  $('#stepQ').innerHTML=s.q;
+  const box=$('#stepChoices'); box.innerHTML='';
+  $('#stepOut').classList.add('hidden'); $('#stepNext').classList.add('hidden');
+  s.ch.forEach(([v,label])=>{
+    const b=document.createElement('button'); b.textContent=label; b.dataset.v=v;
+    b.addEventListener('click',()=>{
+      Array.from(box.children).forEach(x=>{x.disabled=true;x.classList.remove('sel')});
+      b.classList.add('sel');
+      const ok=v===s.correct;
+      const o=$('#stepOut'); o.classList.remove('hidden');
+      o.innerHTML='<div class="verdict"><p>'+(ok?'<span class="ok">Trafione ✓</span>':'<span class="bad">Nie ✗</span>')+' '+s.exp+'</p></div>';
+      $('#stepNext').classList.remove('hidden');
+      $('#stepNext').textContent = si<STEPS.length-1 ? 'Dalej' : 'Odblokuj suwaki';
+    });
+    box.appendChild(b);
+  });
+}
+$('#stepNext').addEventListener('click',()=>{
+  if(si<STEPS.length-1){ si++; renderStep(); $('#stepBox').scrollIntoView({behavior:'smooth',block:'center'}); }
+  else{
+    $('#sec3').hidden=false; $('#sec4').hidden=false; $('#sec5').hidden=false;
+    $('#sec6').hidden=false; $('#sec7').hidden=false; $('#sec8').hidden=false; $('#sec9').hidden=false;
+    $('#stepBox').innerHTML='<p class="locknote">Przejazd prowadzony zaliczony — suwaki odblokowane niżej.</p>';
+    syncUI();
+    requestAnimationFrame(()=>{drawAll(); $('#sec3').scrollIntoView({behavior:'smooth',block:'start'});});
+  }
+});
+
+/* ================= SUWAKI L, C, f ================= */
+const logmap=(v,lo,hi)=>Math.pow(10, Math.log10(lo)+(v/1000)*(Math.log10(hi)-Math.log10(lo)));
+const invmap=(x,lo,hi)=>1000*(Math.log10(x)-Math.log10(lo))/(Math.log10(hi)-Math.log10(lo));
+const LLO=1e-7, LHI=1e-3, CLO=1e-12, CHI=1e-9;
+function syncUI(){
+  $('#sL').value=invmap(S.L,LLO,LHI); $('#sC').value=invmap(S.C,CLO,CHI); $('#sF').value=invmap(S.f,FMIN,FMAX);
+  $('#vL').textContent=henry(S.L); $('#vC').textContent=farad(S.C); $('#vF').textContent=fHz(S.f);
+  $('#sQ1').value=S.Q; $('#sQ2').value=S.Q; $('#vQ1').textContent='Q = '+S.Q; $('#vQ2').textContent='Q = '+S.Q;
+}
+$('#sL').addEventListener('input',e=>{S.L=logmap(+e.target.value,LLO,LHI); syncUI(); drawAll();});
+$('#sC').addEventListener('input',e=>{S.C=logmap(+e.target.value,CLO,CHI); syncUI(); drawAll();});
+$('#sF').addEventListener('input',e=>{S.f=logmap(+e.target.value,FMIN,FMAX); syncUI(); draw1();});
+$('#btnReset').addEventListener('click',()=>{S.L=1e-6;S.C=129.2e-12;S.f=14e6;syncUI();drawAll();});
+
+/* ================= BRAMKA B + przełącznik ================= */
+let gBv=null;
+wireChoice('#gB', v=>{gBv=v; $('#gBsubmit').disabled=false;});
+$('#gBsubmit').addEventListener('click',()=>{
+  const ok=gBv==='peak';
+  $('#gBout').classList.remove('hidden');
+  $('#gBout').innerHTML='<div class="verdict"><p>'+(ok?'<span class="ok">Trafione ✓</span>':'<span class="bad">Nie ✗</span>')+
+    ' Obwód równoległy robi <b>dokładnie odwrotnie</b> niż szeregowy: w f₀ jego impedancja skacze do <b>maksimum</b>. Przełącz teraz sam i zobacz obie krzywe — druga zostaje przygaszona w tle, żeby dało się je porównać.</p></div>';
+  $('#gBsubmit').disabled=true;
+  $('#sec4b').hidden=false;
+  requestAnimationFrame(()=>{draw2();});
+});
+$('#btnSer').addEventListener('click',()=>{S.mode='ser';$('#btnSer').classList.add('sel');$('#btnPar').classList.remove('sel');draw2();});
+$('#btnPar').addEventListener('click',()=>{S.mode='par';$('#btnPar').classList.add('sel');$('#btnSer').classList.remove('sel');draw2();});
+$('#sQ1').addEventListener('input',e=>{S.Q=+e.target.value; syncUI(); draw2(); draw3();});
+$('#sQ2').addEventListener('input',e=>{S.Q=+e.target.value; syncUI(); draw2(); draw3();});
+
+/* samowyjaśnienie */
+$('#seTA').addEventListener('input',e=>{$('#seBtn').disabled = e.target.value.trim().length<3;});
+$('#seBtn').addEventListener('click',()=>{$('#seOut').classList.remove('hidden'); $('#seBtn').disabled=true;});
+
+/* ================= BRAMKA C ================= */
+$('#gCin').addEventListener('input',e=>{$('#gCsubmit').disabled = e.target.value==='';});
+$('#gCsubmit').addEventListener('click',()=>{
+  const g=parseFloat($('#gCin').value);
+  const ok=Math.abs(g-140)<=15;
+  $('#gCout').classList.remove('hidden');
+  $('#gCout').innerHTML='<div class="verdict"><p>Powiedziałeś <b>'+num(g,1)+' kHz</b>, a jest <b>140 kHz</b> — '+
+    (ok?'<span class="ok">blisko ✓</span>':'<span class="bad">pudło ✗</span>')+
+    '. Reguła jest jednodzielna: <b>B = f₀ / Q</b>. 14 000 kHz / 100 = 140 kHz. Sprawdź ją teraz suwakiem — i zobacz, jak krzywa zwęża się dokładnie w tej proporcji.</p></div>';
+  $('#gCsubmit').disabled=true;
+  $('#sec5b').hidden=false;
+  requestAnimationFrame(()=>{draw3();});
+});
+$('#btnExam').addEventListener('click',()=>{S.L=1e-6;S.C=129.2e-12;S.Q=100;syncUI();drawAll();});
+$('#btnAM').addEventListener('click',()=>{S.L=220e-6;S.C=556e-12;syncUI();drawAll();});
+$('#chkAM').addEventListener('change',e=>{S.am=e.target.checked; draw3();});
+
+/* ================= BRAMKA D + prawo 1/√(LC) ================= */
+let gDv=null;
+wireChoice('#gD', v=>{gDv=v; $('#gDsubmit').disabled=false;});
+$('#gDsubmit').addEventListener('click',()=>{
+  const ok=gDv==='d2';
+  $('#gDout').classList.remove('hidden');
+  $('#gDout').innerHTML='<div class="verdict"><p>'+(ok?'<span class="ok">Trafione ✓</span>':'<span class="bad">Nie ✗</span>')+
+    ' f₀ spadnie <b>dwukrotnie</b>, nie czterokrotnie — bo C siedzi <b>pod pierwiastkiem</b>. Sprawdź klikaniem.</p></div>';
+  $('#gDsubmit').disabled=true;
+  $('#sec6b').hidden=false;
+});
+$$('#sec6b [data-op]').forEach(b=>b.addEventListener('click',()=>{
+  const before=F0(S.L,S.C); let what='';
+  switch(b.dataset.op){
+    case 'C4': S.C=Math.min(CHI,S.C*4); what='C × 4'; break;
+    case 'Cd4': S.C=Math.max(CLO,S.C/4); what='C ÷ 4'; break;
+    case 'C2': S.C=Math.min(CHI,S.C*2); what='C × 2'; break;
+    case 'L4': S.L=Math.min(LHI,S.L*4); what='L × 4'; break;
+    case 'Ld4': S.L=Math.max(LLO,S.L/4); what='L ÷ 4'; break;
+    default: S.L=1e-6; S.C=129.2e-12; what='reset';
+  }
+  const after=F0(S.L,S.C);
+  syncUI(); drawAll();
+  $('#ro4').textContent = what+'   ·   L = '+henry(S.L)+', C = '+farad(S.C)+'\n'+
+    'f₀ przed: '+fHz(before)+'   →   f₀ po: '+fHz(after)+'   ·   stosunek: × '+num(after/before,3);
+  $('#ro4').style.whiteSpace='pre-line';
+}));
+
+/* ================= MOC ================= */
+$$('#sec7 [data-el]').forEach(b=>b.addEventListener('click',()=>{
+  $$('#sec7 [data-el]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel');
+  S.el=b.dataset.el; draw4();
+}));
+
+/* ================= REVEAL ODTWORZENIOWE ================= */
+$$('.revBtn').forEach(btn=>{
+  const ta=$('#'+btn.dataset.for);
+  ta.addEventListener('input',()=>{ btn.disabled = ta.value.trim().length<10; });
+  btn.addEventListener('click',()=>{ $('#'+btn.dataset.for+'out').classList.remove('hidden'); btn.disabled=true; });
+});
+
+/* ================= START ================= */
+let rt=null;
+window.addEventListener('resize',()=>{clearTimeout(rt); rt=setTimeout(drawAll,120);});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawAll);
+syncUI();
+drawAll();
+</script>
+</body>
+</html>

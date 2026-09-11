@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karta pasm — 11 par, dwie minuty</title>
+<style>
+:root{
+  --bg:#f2f1ee; --surface:#fbfaf8; --line:#d9d6cf;
+  --ink:#1c1d1f; --ink2:#55565a; --ink3:#8b8c90;
+  --classic:#1f6f78;      /* klasyczne — okrągłe */
+  --warc:#a8552b;         /* WARC — brzydkie */
+  --classic-bg:rgba(31,111,120,.09);
+  --warc-bg:rgba(168,85,43,.10);
+  --ok:#2f6b3d; --bad:#9b3226;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#141517; --surface:#1c1e21; --line:#33363b;
+    --ink:#eceae6; --ink2:#a6a8ad; --ink3:#74767c;
+    --classic:#5fb8c0; --warc:#e0916a;
+    --classic-bg:rgba(95,184,192,.13); --warc-bg:rgba(224,145,106,.13);
+    --ok:#79c48c; --bad:#e4796a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141517; --surface:#1c1e21; --line:#33363b;
+  --ink:#eceae6; --ink2:#a6a8ad; --ink3:#74767c;
+  --classic:#5fb8c0; --warc:#e0916a;
+  --classic-bg:rgba(95,184,192,.13); --warc-bg:rgba(224,145,106,.13);
+  --ok:#79c48c; --bad:#e4796a;
+}
+:root[data-theme="light"]{
+  --bg:#f2f1ee; --surface:#fbfaf8; --line:#d9d6cf;
+  --ink:#1c1d1f; --ink2:#55565a; --ink3:#8b8c90;
+  --classic:#1f6f78; --warc:#a8552b;
+  --classic-bg:rgba(31,111,120,.09); --warc-bg:rgba(168,85,43,.10);
+  --ok:#2f6b3d; --bad:#9b3226;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+  display:flex; justify-content:center; padding:20px 16px 40px;
+}
+.wrap{width:100%; max-width:560px; display:flex; flex-direction:column; gap:14px}
+header{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap}
+h1{font-size:17px; font-weight:650; margin:0; letter-spacing:-.01em}
+.sub{font-size:12.5px; color:var(--ink3)}
+.tabs{display:flex; gap:6px}
+.tab{
+  font:inherit; font-size:13px; padding:5px 13px; border-radius:999px; cursor:pointer;
+  background:transparent; color:var(--ink2); border:1px solid var(--line);
+}
+.tab[aria-selected="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.tab:focus-visible{outline:2px solid var(--classic); outline-offset:2px}
+
+/* ---- tabela ---- */
+table{width:100%; border-collapse:collapse; background:var(--surface);
+  border:1px solid var(--line); border-radius:8px; overflow:hidden}
+caption{caption-side:top; text-align:left; font-size:12.5px; color:var(--ink3); padding-bottom:7px}
+th,td{padding:6px 10px; text-align:right; font-variant-numeric:tabular-nums}
+th{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink3);
+   font-weight:600; border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+tbody tr{border-top:1px solid var(--line)}
+tbody tr:first-child{border-top:none}
+td.band{font-weight:650; font-variant-numeric:normal}
+td.n{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:14.5px}
+td.tag{font-size:11px; letter-spacing:.05em; text-transform:uppercase; text-align:right}
+tr.classic td.band,tr.classic td.tag{color:var(--classic)}
+tr.warc{background:var(--warc-bg)}
+tr.warc td.band,tr.warc td.tag{color:var(--warc)}
+tr.classic{background:var(--classic-bg)}
+tr.vhf{background:transparent}
+tr.vhf td.band,tr.vhf td.tag{color:var(--ink3)}
+
+.rules{background:var(--surface); border:1px solid var(--line); border-radius:8px;
+  padding:11px 13px; font-size:13px; color:var(--ink2); display:flex; flex-direction:column; gap:6px}
+.rules b{color:var(--ink); font-weight:600}
+.rules .k{color:var(--classic); font-weight:600}
+.rules .w{color:var(--warc); font-weight:600}
+
+/* ---- dryl ---- */
+.drill{background:var(--surface); border:1px solid var(--line); border-radius:8px;
+  padding:18px; display:flex; flex-direction:column; gap:14px; min-height:210px}
+.count{font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--ink3)}
+.q{font-size:26px; font-weight:650; letter-spacing:-.02em}
+.q small{display:block; font-size:13px; font-weight:400; color:var(--ink2);
+  letter-spacing:0; margin-top:5px}
+.ans{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:24px;
+  font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.ans .unit{font-size:14px; color:var(--ink3)}
+.hint{font-size:12.5px; color:var(--ink2)}
+.row{display:flex; gap:8px; flex-wrap:wrap}
+button.act{font:inherit; font-size:14px; padding:8px 16px; border-radius:7px; cursor:pointer;
+  border:1px solid var(--line); background:transparent; color:var(--ink)}
+button.act:focus-visible{outline:2px solid var(--classic); outline-offset:2px}
+button.primary{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+button.hit{border-color:var(--ok); color:var(--ok)}
+button.miss{border-color:var(--bad); color:var(--bad)}
+.score{font-size:15px}
+.score b{font-size:22px; font-variant-numeric:tabular-nums}
+ul.missed{margin:6px 0 0; padding-left:18px; font-size:13.5px; color:var(--ink2)}
+ul.missed li{margin:2px 0}
+ul.missed code{font-family:ui-monospace,Menlo,monospace; color:var(--ink)}
+.hidden{display:none}
+@media (prefers-reduced-motion:no-preference){
+  .drill>*{animation:in .16s ease-out}
+  @keyframes in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Karta pasm — 11 par</h1>
+      <div class="sub">Granice zewnętrzne wg KTPCz (UKE). Pytania 87–97 puli.</div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="t-tab" aria-selected="true" aria-controls="p-tab">Tabela</button>
+      <button class="tab" role="tab" id="t-dry" aria-selected="false" aria-controls="p-dry">Dryl · 5</button>
+    </div>
+  </header>
+
+  <section id="p-tab" role="tabpanel" aria-labelledby="t-tab">
+    <table>
+      <caption>Kolor niesie regułę: <span style="color:var(--classic);font-weight:600">klasyczne</span> mają okrągłą dolną granicę, <span style="color:var(--warc);font-weight:600">WARC</span> nie mają.</caption>
+      <thead><tr><th>Pasmo</th><th>Dolna</th><th>Górna</th><th>Szer.</th><th></th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </section>
+
+  <section id="p-dry" role="tabpanel" aria-labelledby="t-dry" class="hidden">
+    <div class="drill" id="drill"></div>
+  </section>
+
+  <div class="rules">
+    <div><b>Dolna granica rozstrzyga rodzinę.</b> Okrągła → <span class="k">klasyczne</span>. Nieokrągła → <span class="w">WARC</span>. Dlatego 15 m to <code>21000</code>, nigdy 21890; a 12 m to <code>24890</code>, nigdy 25000.</div>
+    <div><b>40 m jest węższe od 80 m</b> — 200 kHz przeciw 300 kHz, mimo wyższego położenia. Stąd <code>7200</code>, nie 7250.</div>
+    <div><b>Pula pyta o granice zewnętrzne.</b> 7100, 14250 i 1850 to granice <em>podzakresów</em> (satelitarna / współdzielenie) — prawdziwe liczby, zła odpowiedź.</div>
+  </div>
+
+</div>
+
+<script>
+const BANDS = [
+  {b:"160 m", lo:1810,  hi:2000,  u:"kHz", fam:"classic"},
+  {b:"80 m",  lo:3500,  hi:3800,  u:"kHz", fam:"classic"},
+  {b:"40 m",  lo:7000,  hi:7200,  u:"kHz", fam:"classic"},
+  {b:"30 m",  lo:10100, hi:10150, u:"kHz", fam:"warc"},
+  {b:"20 m",  lo:14000, hi:14350, u:"kHz", fam:"classic"},
+  {b:"17 m",  lo:18068, hi:18168, u:"kHz", fam:"warc"},
+  {b:"15 m",  lo:21000, hi:21450, u:"kHz", fam:"classic"},
+  {b:"12 m",  lo:24890, hi:24990, u:"kHz", fam:"warc"},
+  {b:"10 m",  lo:28000, hi:29700, u:"kHz", fam:"classic"},
+  {b:"6 m",   lo:50,    hi:52,    u:"MHz", fam:"vhf"},
+  {b:"2 m",   lo:144,   hi:146,   u:"MHz", fam:"vhf"},
+];
+const LABEL = {classic:"klasyczne", warc:"WARC", vhf:"UKF"};
+
+/* --- tabela --- */
+document.getElementById("tb").innerHTML = BANDS.map(x=>{
+  const w = x.u==="kHz" ? (x.hi-x.lo)+" kHz" : (x.hi-x.lo)+" MHz";
+  return `<tr class="${x.fam}">
+    <td class="band">${x.b}</td>
+    <td class="n">${x.lo}</td>
+    <td class="n">${x.hi}</td>
+    <td class="n" style="color:var(--ink3);font-size:13px">${w}</td>
+    <td class="tag">${LABEL[x.fam]}</td></tr>`;
+}).join("");
+
+/* --- zakładki --- */
+const tabs = {"t-tab":"p-tab","t-dry":"p-dry"};
+Object.keys(tabs).forEach(id=>{
+  document.getElementById(id).addEventListener("click",()=>{
+    Object.entries(tabs).forEach(([t,p])=>{
+      const on = t===id;
+      document.getElementById(t).setAttribute("aria-selected", on);
+      document.getElementById(p).classList.toggle("hidden", !on);
+    });
+    if(id==="t-dry") start();
+  });
+});
+
+/* --- dryl --- */
+const D = document.getElementById("drill");
+let queue=[], idx=0, hits=0, missed=[];
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function start(){ queue = shuffle(BANDS.slice()).slice(0,5); idx=0; hits=0; missed=[]; ask(); }
+
+function ask(){
+  if(idx>=queue.length) return done();
+  const x = queue[idx];
+  D.innerHTML = `
+    <div class="count">${idx+1} z ${queue.length}</div>
+    <div class="q">${x.b}<small>Dolna i górna granica. Powiedz na głos, potem sprawdź.</small></div>
+    <div class="row"><button class="act primary" id="show">Pokaż</button></div>`;
+  document.getElementById("show").addEventListener("click",()=>reveal(x));
+  document.getElementById("show").focus();
+}
+
+function reveal(x){
+  D.innerHTML = `
+    <div class="count">${idx+1} z ${queue.length}</div>
+    <div class="q" style="font-size:18px">${x.b}</div>
+    <div class="ans">${x.lo} – ${x.hi} <span class="unit">${x.u}</span></div>
+    <div class="hint">${x.fam==="warc"
+        ? "WARC — dolna granica nieokrągła. Nigdy nie zaokrąglaj jej w górę."
+        : x.fam==="classic"
+          ? "Klasyczne — dolna granica okrągła."
+          : "UKF. Dystraktory 50–54 i 144–148 MHz to przydziały Regionu 2."}</div>
+    <div class="row">
+      <button class="act hit" id="hit">Trafione</button>
+      <button class="act miss" id="miss">Pudło</button>
+    </div>`;
+  document.getElementById("hit").addEventListener("click",()=>{hits++; idx++; ask();});
+  document.getElementById("miss").addEventListener("click",()=>{missed.push(x); idx++; ask();});
+  document.getElementById("hit").focus();
+}
+
+function done(){
+  const list = missed.length
+    ? `<ul class="missed">${missed.map(x=>`<li>${x.b} — <code>${x.lo} – ${x.hi} ${x.u}</code></li>`).join("")}</ul>`
+    : `<div class="hint">Komplet. Następnym razem weź pięć innych.</div>`;
+  D.innerHTML = `
+    <div class="count">Koniec</div>
+    <div class="score"><b>${hits}</b> / ${queue.length}</div>
+    ${missed.length?`<div class="hint">Do powtórzenia:</div>`:""}
+    ${list}
+    <div class="row"><button class="act primary" id="again">Jeszcze pięć</button></div>`;
+  document.getElementById("again").addEventListener("click",start);
+  document.getElementById("again").focus();
+}
+</script>
+</body>
+</html>

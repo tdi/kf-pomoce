@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8">
+<title>Wzory — jedna strona</title>
+<style>
+@page{size:A4 portrait;margin:8mm}
+*{box-sizing:border-box}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;background:#fff;color:#000;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+.sheet{width:194mm;height:281mm;margin:0 auto;overflow:hidden;
+ font-size:8pt;line-height:1.24}
+header{border-bottom:1.4pt solid #000;padding-bottom:1.4mm;margin-bottom:2mm;
+ display:flex;align-items:baseline;justify-content:space-between}
+h1{font-size:1.55em;margin:0;font-weight:700;letter-spacing:-.01em}
+header em{font-size:.86em;color:#555;font-style:normal}
+.cols{column-count:3;column-gap:5mm;column-rule:.4pt solid #bbb;
+ height:calc(100% - 13mm)}
+section{break-inside:avoid;page-break-inside:avoid;margin:0 0 2.4mm}
+h2{font-size:.88em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+ margin:0 0 .9mm;border-bottom:.5pt solid #000;padding-bottom:.4mm}
+pre{font-family:"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+ font-size:.97em;line-height:1.3;margin:0 0 .9mm;padding-left:1.8mm;
+ border-left:1pt solid #999;white-space:pre-wrap}
+p{margin:0 0 .9mm;font-size:.93em;color:#333}
+p b,pre b{color:#000}
+.ex{font-size:.88em;color:#444}
+.ex b{color:#000}
+.box{border:.9pt solid #000;padding:1.4mm 1.8mm;margin:0 0 2mm;break-inside:avoid}
+.box h3{margin:0 0 .8mm;font-size:.85em;letter-spacing:.06em;text-transform:uppercase}
+.box p{font-size:.92em;margin:0 0 .7mm;color:#000}
+.box p:last-child{margin:0}
+u{text-decoration:none;border-bottom:1.4pt solid #000}
+footer{border-top:.5pt solid #999;padding-top:1.2mm;margin-top:1.6mm;
+ font-size:.8em;color:#666;display:flex;justify-content:space-between}
+.noprint{max-width:194mm;margin:0 auto 10px;padding:10px 0;font-size:13px}
+.noprint button{font:inherit;padding:7px 18px;border:1px solid #111;background:#111;
+ color:#fff;border-radius:4px;cursor:pointer}
+.noprint span{color:#555;margin-left:12px}
+#fit{font-weight:600;color:#111}
+@media print{.noprint{display:none}}
+@media screen{body{background:#e9e7e2;padding:14px 0}
+ .sheet{background:#fff;box-shadow:0 1px 7px rgba(0,0,0,.2);padding:6mm 5mm;
+  width:206mm;height:293mm}}
+</style></head><body>
+<div class="noprint"><button onclick="print()">Drukuj / zapisz jako PDF</button>
+<span>A4 pionowo · marginesy domyślne · odznacz „Nagłówki i stopki" · skala 100 %</span>
+<div style="margin-top:6px;color:#555">dopasowanie: <span id="fit">liczę…</span></div></div>
+
+<div class="sheet" id="sheet">
+<header><h1>Wzory — pozwolenie kategorii 1</h1><em>pula UKE, Wersja 3</em></header>
+<div class="cols" id="cols">
+
+<section><h2>Wartości prądu zmiennego</h2>
+<pre>U_sk  = U_max / 1,41
+U_max = U_sk  · 1,41
+U_pp  = 2 · U_max
+U_sk  = U_pp / 2,83</pre>
+<p class="ex">230 sk → <b>325</b> ampl. · 200 ampl. → <b>141,4</b> sk · 678 pp → 339 szcz. → <b>240</b> sk</p></section>
+
+<section><h2>Moc</h2>
+<pre>P = U·I = U²/R = I²·R
+<b>PEP = U_max² / (2R)</b>
+<b>PEP = U_pp²  / (8R)</b>
+η = P_wy / P_zas · 100 %</pre>
+<p class="ex">U_max 100 V na 50 Ω → <b>100 W</b> · 100 W wej. i 40 W wyj. → <b>40 %</b></p>
+<p class="ex">2R bo średnia z sin² = ½</p></section>
+
+<section><h2>Decybele</h2>
+<pre>moc      dB = 10·log(P₂/P₁)
+napięcie dB = 20·log(U₂/U₁)
+
+        moc    napięcie
+ 3 dB    ×2      ×1,41
+ 6 dB    ×4      <b>×2</b>
+10 dB   ×10      ×3,16
+20 dB  ×100      ×10</pre>
+<pre>0 dBm = 1 mW   30 dBm = 1 W
+40 dBm = 10 W  50 dBm = 100 W
+0 dBW = 1 W    dBm = dBW+30
+
+dBm−dBm = dB   dBm+dB = dBm
+dBm+dBm = bez sensu</pre>
+<p class="ex">Szum <b>−174 dBm/Hz</b>, dalej +10·log(B). Kanał 10 kHz → <b>−134 dBm</b></p>
+<p class="ex"><b>1 jednostka S = 6 dB.</b> S7→S9 = 12 dB = <b>16×</b> mocy</p>
+<p class="ex"><b>dBi = dBd + 2,15</b></p></section>
+
+<section><h2>Rezonans</h2>
+<pre>f = 1 / (2π√(LC))
+<b>Q = f / Δf      Δf = f/Q</b>
+Q = X / R
+X_L = 2π f L
+X_C = 1 / (2π f C)</pre>
+<p class="ex"><b>f ×2 → C ÷4.</b> 400 → <b>100 pF</b> · 14 MHz przy Q=100 → <b>140 kHz</b> · C ×10 → X_C ÷10</p></section>
+
+<section><h2>Łączenie</h2>
+<pre>cewki szereg.  L = L₁+L₂
+kondens. równ. C = C₁+C₂
+rezyst. szereg. R = R₁+R₂
+rezyst. równ. 1/R = Σ 1/Rᵢ
+(kondens. szereg. jak R równ.)</pre>
+<p class="ex">30+60 = <b>90 µH</b> · rdzeń: <b>L = µ·L</b>, czyli <b>ROŚNIE</b> (100 µH, µ=10 → 1000 µH)</p>
+<p class="ex"><b>Grubszy drut → mniejsze R → większe Q</b></p></section>
+
+<section><h2>Fale i linie</h2>
+<pre>λ[m] = 300 / f[MHz]
+f[MHz] = 300 / λ[m]</pre>
+<p class="ex">dipol ≈ <b>73 Ω</b>; niżej → impedancja <b>maleje</b></p>
+<p class="ex">wsp. skrócenia = v_kabel / c</p>
+<p class="ex">SWR <b>1:1</b> dopasowanie · <b>∞</b> zwarcie albo przerwa</p></section>
+
+<section><h2>Tranzystor i zasilacz</h2>
+<pre><b>β = I_C / I_B    I_B = I_C/β</b>
+zasilacz z filtrem C:
+  U_wy = U_sk·1,41
+  U_sk = U_wy/1,41
+dioda: U_wst ≥ U_sk·1,41</pre>
+<p class="ex">β=100, I_C=100 mA → <b>1 mA</b> · 25 V wyj. → <b>17,7 V</b> sk · 300 V sk → szczyt <b>424 V</b>, dioda 400 V <b>za słaba</b></p></section>
+
+<section><h2>Konfiguracje</h2>
+<pre>układ        wejście  wyjście
+wsp. emiter   baza    kolektor
+wsp. baza    <b>EMITER</b>   kolektor
+wsp. kolektor baza    <b>EMITER</b></pre>
+<p class="ex">Elektroda z nazwy = odniesienie, jest w OBU parach. Baza steruje, kolektor oddaje, <b>emiter wchodzi na wolne</b>.</p>
+<p class="ex">Środkowa litera to baza: <b>N<u>P</u>N → plus</b>, <b>P<u>N</u>P → minus</b>. Bipolarny <b>prądem</b>, polowy <b>napięciem</b>.</p></section>
+
+<section><h2>Zakresy pasm</h2>
+<pre>160m  1810–2000 kHz
+ 80m  3500–3800
+ 40m  7000–7200
+<b> 30m 10100–10150  WARC 50k</b>
+ 20m 14000–14350
+<b> 17m 18068–18168  WARC 100k</b>
+ 15m 21000–21450
+<b> 12m 24890–24990  WARC 100k</b>
+ 10m 28000–29700
+  6m  50–52 MHz
+  2m 144–146 MHz</pre>
+<p class="ex"><b>WARC są wąskie.</b> Wariant dający pasmu WARC więcej niż 100 kHz jest błędny bez liczenia.</p></section>
+
+<section><h2>Kategorie</h2>
+<pre>kat 1  500 W  wszystkie  25 lat
+kat 3  100 W  <b>lista Z WARC</b> 25 lat
+kat 5  50 W ≤30 MHz
+       15 W >30 MHz   10 lat
+dodatkowe 1500 W   12 mies.</pre></section>
+
+<section><h2>Emisje</h2>
+<pre>PSK31 ~31 Hz   CW ~100 Hz
+SSB  2,7 kHz   AM = 2 × SSB
+FM fonia UKF ~12–16 kHz
+I p.cz. 10,7 MHz  II 455 kHz</pre>
+<p class="ex"><b>RTTY = FSK</b>, kluczowanie częstotliwości („shift 170 Hz")</p>
+<p class="ex"><b>DDS → przetwornik C/A</b></p>
+<p class="ex">dioda → <b>AM</b> · mieszacz+BFO → <b>SSB/CW</b> · PLL → <b>FM</b></p>
+<p class="ex">SSB: <b>filtrowa, fazowa, Weavera</b></p></section>
+
+<section><div class="box"><h3>Pułapki</h3>
+<p><b>1.</b> PEP przez <b>2R</b>, nie przez R.</p>
+<p><b>2.</b> 6 dB = <b>×4 mocy</b>, ale <b>×2 napięcia</b>.</p>
+<p><b>3.</b> Pod pierwiastkiem zmiana się kwadratuje: f ×2 → C ÷4.</p></div>
+<div class="box"><h3>Zanim odpowiesz</h3>
+<p>Zmiana wielkości — <b>powiedz kierunek słowem</b>, zanim policzysz.</p>
+<p>Definicja lub procedura — policz człony, ale sprawdź, czy ogon należy do <b>tego</b> pojęcia.</p></div></section>
+
+</div>
+<footer><span>4 września 2026 · próg 75 % w każdym z czterech wymogów, bez kompensacji</span><span>kat. 1</span></footer>
+</div>
+
+<script>
+(function fit(){
+  var cols=document.getElementById('cols'), sheet=document.getElementById('sheet'),
+      out=document.getElementById('fit'), size=8.6;
+  function over(){return cols.scrollHeight > cols.clientHeight+1;}
+  sheet.style.fontSize=size+'pt';
+  var guard=0;
+  while(over() && size>6.0 && guard++<60){ size-=0.1; sheet.style.fontSize=size.toFixed(1)+'pt'; }
+  if(!over()){
+    var up=0;
+    while(!over() && size<9.6 && up++<20){ size+=0.1; sheet.style.fontSize=size.toFixed(1)+'pt'; }
+    if(over()){ size-=0.1; sheet.style.fontSize=size.toFixed(1)+'pt'; }
+  }
+  out.textContent = over()
+    ? 'NIE MIEŚCI SIĘ nawet przy 6,0 pt — trzeba coś wyciąć'
+    : size.toFixed(1)+' pt · mieści się na jednej stronie A4';
+  out.style.color = over() ? '#a33' : '#161';
+})();
+</script>
+</body></html>

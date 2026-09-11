@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pl" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Granice pasm amatorskich — trenażer</title>
+<!--
+  ENGRAM EXPLORABLE
+  node:        zakresy-pasm-160-2m
+  topic:       krotkofalarstwo-a
+  generated:   2026-07-30
+  arbitrary:   true  -> to NIE jest model do wyprowadzania, tylko dryl odtwarzania.
+                        Żadnej teorii, żadnych suwaków parametrów. Retrieval, nie eksploracja.
+  pomiar na zimno 30.07: 2 z 11 par. Próg rubryki: 9 z 11.
+
+  ŹRÓDŁO DANYCH — istotne:
+    Pytania 87-97 puli UKE NIE MAJĄ w PDF-ie z kluczem żadnych podkreśleń
+    (strony 54 i 60: zero cienkich prostokątów, zero kresek m/l/S, zero adnotacji,
+     zero form XObject — sprawdzone wyczerpująco 30.07.2026).
+    Granice zweryfikowano u źródła pierwotnego: wyciąg UKE z Krajowej Tablicy
+    Przeznaczeń Częstotliwości, bip.uke.gov.pl .../zakresy_amatorskie.pdf
+    Warianty A/B/C w dryl C są dosłowne z PDF-a UKE.
+
+  misconceptions targeted:
+    1. GŁÓWNA — mylenie granicy ZAKRESU z granicą PODZAKRESU satelitarnego.
+       Podał 14250 dla 20 m: to dokładna górna granica podzakresu z amatorską satelitarną.
+       Podobnie 7100 (29.07) opisane jako "dawny przydział" — jest granicą wewnętrzną 40 m.
+    2. rozciąganie trafnej reguły "dolne granice są okrągłe" na granice górne (3850, 7250)
+    3. nieznajomość reguły Regionu 1 przy 6 m i 2 m (dystraktory to przydziały amerykańskie)
+
+  self-contained: brak CDN, brak fontów zewnętrznych, brak fetch, brak obrazów. file:// OK.
+-->
+<style>
+  :root{
+    --bg:#fbfaf7; --panel:#ffffff; --ink:#1a1c1f; --ink-dim:#5a6069; --line:#dcdcd6;
+    --accent:#7a4bd6; --accent-soft:#efe7ff;
+    --klas:#1d4ed8;      /* pasma klasyczne */
+    --warc:#c2410c;      /* pasma WARC */
+    --vhf:#0f766e;       /* VHF */
+    --sub:#8b5cf6;       /* granice wewnętrzne / podzakres satelitarny */
+    --ok:#166534; --bad:#b91c1c;
+    --ok-soft:#e3f5e7; --bad-soft:#fdeaea;
+    --grid:#e8e8e2;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root[data-theme="auto"]{
+      --bg:#14161a; --panel:#1c1f25; --ink:#e9e9e4; --ink-dim:#a0a6b0; --line:#333842;
+      --accent:#b79bff; --accent-soft:#2a2340;
+      --klas:#7dabff; --warc:#fb923c; --vhf:#4fd1c5; --sub:#c4b5fd;
+      --ok:#4ade80; --bad:#f87171;
+      --ok-soft:#16281c; --bad-soft:#2e1a1a;
+      --grid:#262a31;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14161a; --panel:#1c1f25; --ink:#e9e9e4; --ink-dim:#a0a6b0; --line:#333842;
+    --accent:#b79bff; --accent-soft:#2a2340;
+    --klas:#7dabff; --warc:#fb923c; --vhf:#4fd1c5; --sub:#c4b5fd;
+    --ok:#4ade80; --bad:#f87171;
+    --ok-soft:#16281c; --bad-soft:#2e1a1a;
+    --grid:#262a31;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:17px}
+  main{max-width:880px;margin:0 auto;padding:24px 18px 90px}
+  h1{font-size:1.55rem;line-height:1.25;margin:.2rem 0 .5rem;text-wrap:balance}
+  h2{font-size:1.12rem;margin:0 0 .6rem;letter-spacing:.01em}
+  .lead{color:var(--ink-dim);margin:0 0 1.6rem}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+          padding:20px 20px 22px;margin:0 0 20px}
+  .tag{display:inline-block;font:600 11px/1 var(--mono);letter-spacing:.09em;
+       text-transform:uppercase;color:var(--ink-dim);border:1px solid var(--line);
+       border-radius:99px;padding:5px 10px;margin-bottom:12px}
+  .mono{font-family:var(--mono)}
+  .dim{color:var(--ink-dim)}
+  .locked{opacity:.32;pointer-events:none;filter:saturate(.2)}
+  button{font:inherit;font-size:.95rem;background:var(--panel);color:var(--ink);
+         border:1px solid var(--line);border-radius:7px;padding:9px 15px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  input[type=text]{font:inherit;font-family:var(--mono);font-size:1.05rem;
+    background:var(--bg);color:var(--ink);border:1px solid var(--line);
+    border-radius:7px;padding:9px 11px;width:9.5ch;text-align:right}
+  input[type=text]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .verdict{margin-top:14px;padding:13px 15px;border-radius:8px;border:1px solid var(--line);
+           font-size:.95rem;line-height:1.5}
+  .verdict.good{background:var(--ok-soft);border-color:var(--ok)}
+  .verdict.bad{background:var(--bad-soft);border-color:var(--bad)}
+  .verdict b{font-family:var(--mono)}
+  .opts{display:flex;flex-direction:column;gap:8px;margin:14px 0 0}
+  .opt{text-align:left;font-family:var(--mono);font-size:.98rem;padding:11px 14px;width:100%}
+  .opt.pick-ok{background:var(--ok-soft);border-color:var(--ok)}
+  .opt.pick-bad{background:var(--bad-soft);border-color:var(--bad)}
+  .opt.reveal{border-color:var(--ok);border-style:dashed}
+  .score{font-family:var(--mono);font-size:.85rem;color:var(--ink-dim);
+         letter-spacing:.03em;margin-top:14px}
+  .prompt{font-size:1.25rem;margin:6px 0 16px}
+  .prompt .band{font-family:var(--mono);font-weight:700;color:var(--accent)}
+  table{border-collapse:collapse;width:100%;font-family:var(--mono);font-size:.9rem}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  th,td{text-align:left;padding:6px 12px 6px 0;border-bottom:1px solid var(--grid);white-space:nowrap}
+  th{color:var(--ink-dim);font-weight:600;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .k{color:var(--klas)} .w{color:var(--warc)} .v{color:var(--vhf)} .s{color:var(--sub)}
+  canvas{display:block;width:100%;height:auto;border-radius:8px}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:.83rem;color:var(--ink-dim)}
+  .legend i{display:inline-block;width:22px;height:4px;border-radius:2px;
+            vertical-align:middle;margin-right:6px}
+  .cardgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:6px}
+  .card{border:1px solid var(--line);border-radius:8px;padding:14px 15px;background:var(--bg)}
+  .card h3{margin:0 0 8px;font-size:.8rem;letter-spacing:.07em;text-transform:uppercase;
+           color:var(--ink-dim);font-weight:700}
+  .card p{margin:0;font-size:.92rem}
+  .big{font-family:var(--mono);font-size:1.5rem;font-weight:700;letter-spacing:.02em}
+  hr{border:0;border-top:1px solid var(--grid);margin:20px 0}
+  .note{font-size:.85rem;color:var(--ink-dim);margin-top:16px}
+  a{color:var(--accent)}
+  @media (prefers-reduced-motion:no-preference){
+    .verdict{animation:fade .18s ease-out}
+    @keyframes fade{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Granice pasm amatorskich — trenażer</h1>
+<p class="lead">
+  Pomiar na zimno 30.07: <b>2 z 11</b> par, przy progu 9 z 11. To jest jedenaście pytań w puli UKE —
+  więcej niż niejeden cały temat. Węzeł jest czysto pamięciowy, więc nie ma tu nic do wyprowadzania.
+  Jest odtwarzanie, natychmiastowy zwrot i licznik.
+</p>
+
+<!-- ===================== BRAMKA ===================== -->
+<section id="gate">
+  <span class="tag">Zanim odblokuję resztę</span>
+  <h2>Jedno pytanie, bo od niego zależy cała diagnoza</h2>
+  <p>
+    Napisałeś, że pasmo 20 m to <b class="mono">14000–14250</b>. Liczba <b class="mono">14250</b>
+    nie jest zmyślona ani zaokrąglona — występuje w Krajowej Tablicy Przeznaczeń Częstotliwości
+    dokładnie w tym paśmie. Czym ona tam jest?
+  </p>
+  <div class="opts" id="gateOpts"></div>
+  <div id="gateVerdict"></div>
+</section>
+
+<!-- ===================== STRUKTURA ===================== -->
+<section id="struct" class="locked">
+  <span class="tag">Ile tu naprawdę jest do zapamiętania</span>
+  <h2>Jedenaście par — ale tylko dziesięć liczb do zapamiętania</h2>
+  <p style="margin-top:-2px">
+    Najpierw pełna tabela, bo dryle niżej pytają o wszystkie jedenaście pasm i nic
+    nie może się w nich pojawić, czego nie było tutaj.
+  </p>
+
+  <div class="scroll">
+  <table id="fullTable">
+    <thead><tr>
+      <th>pasmo</th><th class="num">dolna</th><th class="num">górna</th>
+      <th class="num">szer.</th><th>skąd ją masz</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="k">160 m</td><td class="num">1810</td><td class="num">2000</td><td class="num">190</td><td class="dim">obie do zapamiętania — 1810 <b>nie</b> jest harmoniczną</td></tr>
+      <tr><td class="k">80 m</td><td class="num">3500</td><td class="num">3800</td><td class="num">300</td><td class="dim">dolna = 3500 ×1 · górna do zapamiętania</td></tr>
+      <tr><td class="k">40 m</td><td class="num">7000</td><td class="num">7200</td><td class="num">200</td><td class="dim">dolna = 3500 ×2 · górna do zapamiętania</td></tr>
+      <tr><td class="w">30 m</td><td class="num">10100</td><td class="num">10150</td><td class="num">50</td><td class="dim">WARC — dolna do zapamiętania, górna = <b>+50</b></td></tr>
+      <tr><td class="k">20 m</td><td class="num">14000</td><td class="num">14350</td><td class="num">350</td><td class="dim">dolna = 3500 ×4 · górna do zapamiętania</td></tr>
+      <tr><td class="w">17 m</td><td class="num">18068</td><td class="num">18168</td><td class="num">100</td><td class="dim">WARC — dolna do zapamiętania, górna = <b>+100</b></td></tr>
+      <tr><td class="k">15 m</td><td class="num">21000</td><td class="num">21450</td><td class="num">450</td><td class="dim">dolna = 3500 ×6 · górna do zapamiętania</td></tr>
+      <tr><td class="w">12 m</td><td class="num">24890</td><td class="num">24990</td><td class="num">100</td><td class="dim">WARC — dolna do zapamiętania, górna = <b>+100</b></td></tr>
+      <tr><td class="k">10 m</td><td class="num">28000</td><td class="num">29700</td><td class="num">1700</td><td class="dim">dolna = 3500 ×8 · górna do zapamiętania</td></tr>
+      <tr><td class="v">6 m</td><td class="num">50</td><td class="num">52</td><td class="num">2</td><td class="dim">MHz — Region 1 (amerykański wariant to 54)</td></tr>
+      <tr><td class="v">2 m</td><td class="num">144</td><td class="num">146</td><td class="num">2</td><td class="dim">MHz — Region 1 (amerykański wariant to 148)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">Wszystko w kHz poza dwoma ostatnimi wierszami. Kolory: <span class="k">klasyczne</span> ·
+     <span class="w">WARC</span> · <span class="v">VHF</span>.</p>
+
+  <div class="cardgrid" style="margin-top:18px">
+    <div class="card">
+      <h3>1 · Dolne klasyczne — wyprowadzasz</h3>
+      <p class="mono" style="font-size:.9rem">3500 ×1 ×2 ×4 ×6 ×8</p>
+      <p class="dim" style="margin-top:6px">
+        <b>80</b> 3500 · <b>40</b> 7000 · <b>20</b> 14000 · <b>15</b> 21000 · <b>10</b> 28000.<br>
+        Wyjątek: <b>160 m = 1810</b> — nie jest harmoniczną, uczysz się osobno.
+      </p>
+    </div>
+    <div class="card">
+      <h3>2 · Górne klasyczne — 6 liczb</h3>
+      <p class="dim" style="margin:0;font-family:var(--mono);font-size:.9rem;line-height:1.9">
+        <b>160</b> 2000 · <b>80</b> 3800 · <b>40</b> 7200<br>
+        <b>20</b> 14350 · <b>15</b> 21450 · <b>10</b> 29700
+      </p>
+      <p class="dim" style="margin-top:8px">Arbitralne. To jest cały koszt pamięciowy klasyki.</p>
+    </div>
+    <div class="card">
+      <h3>3 · WARC — 3 liczby</h3>
+      <p class="dim" style="margin:0;font-family:var(--mono);font-size:.9rem;line-height:1.9">
+        <b>30 m</b> 10100 → +50 → 10150<br>
+        <b>17 m</b> 18068 → +100 → 18168<br>
+        <b>12 m</b> 24890 → +100 → 24990
+      </p>
+      <p class="dim" style="margin-top:8px">Wąskie i o nieokrągłych granicach — po tym je poznajesz.</p>
+    </div>
+    <div class="card">
+      <h3>4 · 6 m i 2 m — 0 liczb</h3>
+      <p class="mono">50–52 &nbsp; 144–146 MHz</p>
+      <p class="dim" style="margin-top:6px">
+        Dystraktory w puli (50–54, 144–148) to przydziały <b>Regionu 2</b>.
+        Polska jest w Regionie 1 → wybierasz niższą.
+      </p>
+    </div>
+  </div>
+
+  <p class="note">
+    Bilans: <b>dziesięć liczb</b> do zapamiętania — 1810, sześć górnych klasycznych
+    (2000, 3800, 7200, 14350, 21450, 29700) i trzy dolne WARC (10100, 18068, 24890).
+    Do tego dwie reguły: harmoniczne 3500 na dolne klasyczne oraz Region 1 zamiast
+    czterech liczb VHF. Górne WARC wychodzą z „+100 / +50".
+  </p>
+
+  <hr>
+
+  <h2>Granice wewnętrzne — źródło Twoich pomyłek</h2>
+  <p style="margin-top:0">
+    KTPCz dzieli trzy pasma na podzakresy. Te liczby są prawdziwe i <b>nigdy nie są odpowiedzią</b>
+    na pytanie „jaki zakres przeznaczony jest dla służby amatorskiej".
+  </p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>pasmo</th><th>podzakres</th><th>co go wyróżnia</th></tr></thead>
+    <tbody>
+      <tr><td>160 m</td><td class="s">1810 – 1850</td><td>AMATORSKA pierwszej ważności</td></tr>
+      <tr><td></td><td>1850 – 2000</td><td>współdzielone ze stałą i ruchomą</td></tr>
+      <tr><td>40 m</td><td>7000 – <span class="s">7100</span></td><td>amatorska + amatorska satelitarna</td></tr>
+      <tr><td></td><td>7100 – 7200</td><td>amatorska, bez satelitarnej</td></tr>
+      <tr><td>20 m</td><td>14000 – <span class="s">14250</span></td><td>amatorska + amatorska satelitarna</td></tr>
+      <tr><td></td><td>14250 – 14350</td><td>amatorska, bez satelitarnej</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ===================== MAPA ===================== -->
+<section id="map" class="locked">
+  <span class="tag">Mapa</span>
+  <h2>Wszystkie jedenaście na jednej osi</h2>
+  <canvas id="axis" width="1680" height="360" aria-label="Oś częstotliwości od 1,8 MHz do 150 MHz z zaznaczonymi pasmami amatorskimi"></canvas>
+  <div class="legend">
+    <span><i style="background:var(--klas)"></i>klasyczne</span>
+    <span><i style="background:var(--warc)"></i>WARC</span>
+    <span><i style="background:var(--vhf)"></i>VHF</span>
+    <span><i style="background:var(--sub)"></i>granica wewnętrzna</span>
+  </div>
+  <p class="note">Skala logarytmiczna — inaczej 30 m i 2 m nie zmieściłyby się na jednym obrazku.
+     Zwróć uwagę, jak wąskie są trzy pomarańczowe.</p>
+</section>
+
+<!-- ===================== DRYL A ===================== -->
+<section id="drillA" class="locked">
+  <span class="tag">Dryl A — pary granic</span>
+  <h2>Wpisz obie granice z pamięci</h2>
+  <p class="prompt">Pasmo <span class="band" id="aBand">—</span> to zakres:</p>
+  <div class="row">
+    <input type="text" id="aLo" inputmode="numeric" autocomplete="off" aria-label="dolna granica">
+    <span class="mono dim">–</span>
+    <input type="text" id="aHi" inputmode="numeric" autocomplete="off" aria-label="górna granica">
+    <span class="mono" id="aUnit">kHz</span>
+    <button class="primary" id="aCheck">Sprawdź</button>
+    <button id="aNext" hidden>Następne →</button>
+  </div>
+  <div id="aVerdict"></div>
+  <div class="score" id="aScore"></div>
+</section>
+
+<!-- ===================== DRYL B ===================== -->
+<section id="drillB" class="locked">
+  <span class="tag">Dryl B — zewnętrzna czy wewnętrzna</span>
+  <h2>Czym jest ta liczba?</h2>
+  <p class="dim" style="margin-top:-4px">Ten dryl celuje w jeden konkretny błąd i nie ma innego zadania.</p>
+  <p class="prompt"><span class="band mono" id="bNum">—</span> <span class="dim" id="bUnit">kHz</span></p>
+  <div class="opts" id="bOpts"></div>
+  <div id="bVerdict"></div>
+  <div class="score" id="bScore"></div>
+</section>
+
+<!-- ===================== DRYL C ===================== -->
+<section id="drillC" class="locked">
+  <span class="tag">Dryl C — format egzaminacyjny</span>
+  <h2>Warianty dosłownie z puli UKE</h2>
+  <p class="dim" style="margin-top:-4px">
+    Pytania 87–97. Warianty przepisane z PDF-a UKE co do znaku; poprawne wskazania zweryfikowane
+    w wyciągu UKE z KTPCz, bo <b>ten blok nie ma w kluczu żadnych podkreśleń</b>.
+  </p>
+  <p class="prompt" id="cQ">—</p>
+  <div class="opts" id="cOpts"></div>
+  <div id="cVerdict"></div>
+  <div class="score" id="cScore"></div>
+</section>
+
+<section>
+  <span class="tag">Źródło</span>
+  <h2>Skąd te liczby</h2>
+  <p style="margin-top:0;font-size:.95rem">
+    <b>Zakresy amatorskie (na podstawie Krajowej Tablicy Przeznaczeń Częstotliwości)</b>, UKE BIP —
+    pobrane 30.07.2026, zapisane w projekcie jako <span class="mono">UKE_zakresy_amatorskie_KTPCz.txt</span>.
+    Pytania 87–97 puli nie mają podkreśleń w PDF-ie z kluczem: strony 54 i 60 zawierają zero cienkich
+    prostokątów, zero kresek rysowanych jako linie, zero adnotacji i zero form XObject — sprawdzone.
+    Dlatego granice pochodzą ze źródła pierwotnego, a nie z klucza.
+  </p>
+</section>
+
+<script>
+"use strict";
+
+/* ---------- dane ---------- */
+const BANDS = [
+  {name:"160 m", lo:1810,  hi:2000,  unit:"kHz", cls:"klas", subs:[[1810,1850],[1850,2000]], subEdge:1850},
+  {name:"80 m",  lo:3500,  hi:3800,  unit:"kHz", cls:"klas"},
+  {name:"40 m",  lo:7000,  hi:7200,  unit:"kHz", cls:"klas", subs:[[7000,7100],[7100,7200]], subEdge:7100},
+  {name:"30 m",  lo:10100, hi:10150, unit:"kHz", cls:"warc"},
+  {name:"20 m",  lo:14000, hi:14350, unit:"kHz", cls:"klas", subs:[[14000,14250],[14250,14350]], subEdge:14250},
+  {name:"17 m",  lo:18068, hi:18168, unit:"kHz", cls:"warc"},
+  {name:"15 m",  lo:21000, hi:21450, unit:"kHz", cls:"klas"},
+  {name:"12 m",  lo:24890, hi:24990, unit:"kHz", cls:"warc"},
+  {name:"10 m",  lo:28000, hi:29700, unit:"kHz", cls:"klas"},
+  {name:"6 m",   lo:50,    hi:52,    unit:"MHz", cls:"vhf"},
+  {name:"2 m",   lo:144,   hi:146,   unit:"MHz", cls:"vhf"}
+];
+
+/* Dryl B: liczba -> [typ, wyjaśnienie] ; typ: 'zew' | 'wew' | 'brak' */
+const NUMS = [
+  [2000,"zew","górna granica 160 m"],
+  [3800,"zew","górna granica 80 m"],
+  [7200,"zew","górna granica 40 m"],
+  [10150,"zew","górna granica 30 m"],
+  [14350,"zew","górna granica 20 m"],
+  [18168,"zew","górna granica 17 m"],
+  [21450,"zew","górna granica 15 m"],
+  [24990,"zew","górna granica 12 m"],
+  [29700,"zew","górna granica 10 m"],
+  [1850,"wew","granica wewnętrzna 160 m — koniec odcinka, w którym służba amatorska ma pierwszą ważność"],
+  [7100,"wew","granica wewnętrzna 40 m — koniec podzakresu z amatorską satelitarną. To NIE jest „dawny przydział”, ta liczba nadal obowiązuje"],
+  [14250,"wew","granica wewnętrzna 20 m — koniec podzakresu z amatorską satelitarną. Dokładnie ta liczba padła u Ciebie jako górna granica pasma"],
+  [3850,"brak","nie występuje nigdzie w 80 m. Górna granica to 3800"],
+  [7250,"brak","nie występuje w 40 m. Górna to 7200, wewnętrzna 7100"],
+  [21500,"brak","nie występuje — dystraktor w pytaniu 93. Górna granica 15 m to 21450"],
+  [29500,"brak","nie występuje — dystraktor w pytaniu 95. Górna granica 10 m to 29700"],
+  [14450,"brak","nie występuje — dystraktor w pytaniu 91"],
+  [18000,"brak","nie występuje — dystraktor w pytaniu 92. Pasmo 17 m zaczyna się od 18068"]
+];
+const B_LABELS = {
+  zew:"górna granica całego pasma — to jest odpowiedź w puli",
+  wew:"granica wewnętrzna (podzakres) — prawdziwa, ale nie jest odpowiedzią",
+  brak:"nie występuje w KTPCz — dystraktor"
+};
+
+/* Dryl C: pytania 87-97, warianty dosłownie z PDF-a UKE, ok = indeks poprawnego */
+const POOL = [
+  {n:87, b:"160 m", o:["1810 kHz – 1950 kHz","1810 kHz – 2000 kHz","1810 kHz – 1980 kHz"], ok:1},
+  {n:88, b:"80 m",  o:["3550 kHz – 3750 kHz","3500 kHz – 3750 kHz","3500 kHz – 3800 kHz"], ok:2},
+  {n:89, b:"40 m",  o:["7000 kHz – 7200 kHz","7100 kHz – 7300 kHz","7050 kHz – 7200 kHz"], ok:0},
+  {n:90, b:"30 m",  o:["10050 kHz – 10200 kHz","10100 kHz – 10150 kHz","10100 kHz – 10200 kHz"], ok:1},
+  {n:91, b:"20 m",  o:["14000 kHz – 14350 kHz","14000 kHz – 14450 kHz","14100 kHz – 14350 kHz"], ok:0},
+  {n:92, b:"17 m",  o:["18050 kHz – 18250 kHz","18068 kHz – 18168 kHz","18000 kHz – 18168 kHz"], ok:1},
+  {n:93, b:"15 m",  o:["21000 kHz – 21500 kHz","21100 kHz – 21450 kHz","21000 kHz – 21450 kHz"], ok:2},
+  {n:94, b:"12 m",  o:["24690 kHz – 24990 kHz","24890 kHz – 24990 kHz","24680 kHz – 24990 kHz"], ok:1},
+  {n:95, b:"10 m",  o:["28500 kHz – 29800 kHz","28000 kHz – 29500 kHz","28000 kHz – 29700 kHz"], ok:2},
+  {n:96, b:"6 m",   o:["50 MHz – 54 MHz","50 MHz – 52 MHz","50 MHz – 53,5 MHz"], ok:1,
+        hint:"50–54 MHz to przydział Regionu 2 (Ameryki). Polska jest w Regionie 1."},
+  {n:97, b:"2 m",   o:["144 MHz – 146 MHz","144 MHz – 148 MHz","143 MHz – 146 MHz"], ok:0,
+        hint:"144–148 MHz to przydział Regionu 2 (Ameryki). Polska jest w Regionie 1."}
+];
+
+/* ---------- pomocnicze ---------- */
+const $ = id => document.getElementById(id);
+const LET = ["A","B","C"];
+function shuffled(a){ const c=a.slice(); for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];} return c; }
+function say(el, ok, html){ el.innerHTML = '<div class="verdict '+(ok?"good":"bad")+'">'+html+"</div>"; }
+function unlock(){ ["struct","map","drillA","drillB","drillC"].forEach(id=>$(id).classList.remove("locked")); }
+
+/* ---------- BRAMKA ---------- */
+(function(){
+  const opts = [
+    {t:"Górna granica całego pasma 20 m — po prostu ją źle zapamiętałem", ok:false,
+     why:"Nie. Górna granica 20 m to <b>14350</b>. Gdyby 14250 było zwykłą pomyłką pamięciową, nie trafiałoby co do kiloherca w linię, która naprawdę istnieje."},
+    {t:"Koniec podzakresu, w którym pracuje też amatorska satelitarna", ok:true, why:""},
+    {t:"Dawny przydział, który już nie obowiązuje", ok:false,
+     why:"Nie — to Twoje wyjaśnienie dla 7100 z 29.07 i tam też było nietrafione. Obie liczby obowiązują <b>dziś</b>, tylko jako granice wewnętrzne."},
+    {t:"Granica segmentu bandplanu IARU, czyli uzgodnienia niewiążącego", ok:false,
+     why:"Nie. Bandplan IARU dzieli pasmo na segmenty emisji i jest niewiążący. 14250 stoi w <b>KTPCz</b>, czyli w akcie prawnym."}
+  ];
+  const box = $("gateOpts"), out = $("gateVerdict");
+  shuffled(opts).forEach(o=>{
+    const b=document.createElement("button"); b.className="opt"; b.textContent=o.t;
+    b.onclick=()=>{
+      [...box.children].forEach(c=>c.disabled=true);
+      if(o.ok){
+        b.classList.add("pick-ok");
+        say(out,true,"<b>Tak.</b> KTPCz dzieli 20 m na <b>14000–14250</b> (amatorska + amatorska satelitarna) i "+
+          "<b>14250–14350</b> (już bez satelitarnej). Podałeś prawdziwą granicę — tylko wewnętrzną. "+
+          "To zupełnie inny błąd niż zgadywanie i leczy się inaczej: nie musisz uczyć się liczb od zera, "+
+          "musisz rozdzielić dwa rejestry. Reszta trenażera jest odblokowana.");
+      }else{
+        b.classList.add("pick-bad");
+        [...box.children].forEach((c,i)=>{ if(opts.find(x=>x.t===c.textContent)?.ok) c.classList.add("reveal"); });
+        say(out,false,o.why+"<br><br><b>Poprawnie:</b> KTPCz dzieli 20 m na <b>14000–14250</b> "+
+          "(amatorska + amatorska satelitarna) i <b>14250–14350</b> (bez satelitarnej). "+
+          "Podałeś prawdziwą liczbę z tablicy, tylko granicę wewnętrzną, nie zewnętrzną. Reszta odblokowana.");
+      }
+      unlock();
+    };
+    box.appendChild(b);
+  });
+})();
+
+/* ---------- MAPA ---------- */
+(function(){
+  const cv=$("axis"), ctx=cv.getContext("2d");
+  const W=cv.width, H=cv.height, L=64, R=W-24, T=54, BOT=H-56;
+  const FMIN=1.6, FMAX=170;                       // MHz
+  const x = f => L + (Math.log10(f)-Math.log10(FMIN))/(Math.log10(FMAX)-Math.log10(FMIN))*(R-L);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function mhz(b,v){ return b.unit==="MHz" ? v : v/1000; }
+  if(!ctx.roundRect){ ctx.roundRect=function(x,y,w,h){ this.rect(x,y,w,h); }; }
+
+  function draw(){
+    const ink=css("--ink"), dim=css("--ink-dim"), grid=css("--grid");
+    const col={klas:css("--klas"),warc:css("--warc"),vhf:css("--vhf")}, sub=css("--sub");
+    ctx.clearRect(0,0,W,H);
+    ctx.font="600 15px "+css("--mono").split(",")[0]+",monospace";
+
+    // siatka dekadowa
+    ctx.strokeStyle=grid; ctx.lineWidth=1.5; ctx.fillStyle=dim;
+    [2,3,5,10,20,30,50,100,150].forEach(f=>{
+      const px=Math.round(x(f))+.5;
+      ctx.beginPath(); ctx.moveTo(px,T-16); ctx.lineTo(px,BOT); ctx.stroke();
+      ctx.textAlign="center"; ctx.fillText(f+" MHz", px, BOT+26);
+    });
+
+    // pasma
+    const lanes=3, laneH=44;
+    BANDS.forEach((b,i)=>{
+      const lane=i%lanes, y=T+lane*laneH;
+      const x1=x(mhz(b,b.lo)), x2=x(mhz(b,b.hi));
+      const w=Math.max(x2-x1, 3.5);
+      ctx.fillStyle=col[b.cls];
+      ctx.beginPath(); ctx.roundRect(x1, y, w, 15, 4); ctx.fill();
+      // granica wewnętrzna
+      if(b.subEdge){
+        const xs=Math.round(x(mhz(b,b.subEdge)))+.5;
+        ctx.strokeStyle=sub; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.moveTo(xs, y-4); ctx.lineTo(xs, y+19); ctx.stroke();
+      }
+      ctx.fillStyle=ink; ctx.textAlign="left";
+      ctx.fillText(b.name, x1, y-7);
+    });
+
+    ctx.fillStyle=dim; ctx.textAlign="left"; ctx.font="500 14px "+css("--sans").split(",")[0]+",sans-serif";
+    ctx.fillText("skala logarytmiczna", L, H-14);
+  }
+  draw();
+  if(window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+})();
+
+/* ---------- DRYL A ---------- */
+(function(){
+  let queue=[], cur=null, hit=0, tot=0, answered=false;
+  const lo=$("aLo"), hi=$("aHi"), out=$("aVerdict"), sc=$("aScore"),
+        nextBtn=$("aNext"), checkBtn=$("aCheck");
+
+  function num(s){ const d=(s||"").replace(/[^\d]/g,""); return d===""?null:parseInt(d,10); }
+
+  function serve(){
+    if(!queue.length) queue=shuffled(BANDS);
+    cur=queue.pop(); answered=false;
+    $("aBand").textContent=cur.name; $("aUnit").textContent=cur.unit;
+    lo.value=""; hi.value=""; out.innerHTML=""; nextBtn.hidden=true; checkBtn.hidden=false;
+    lo.focus();
+  }
+
+  function internalHint(v){
+    for(const b of BANDS) if(b.subEdge && b.subEdge===v)
+      return " Liczba <b>"+v+"</b> to granica <b>wewnętrzna</b> "+b.name+
+             " — koniec podzakresu z amatorską satelitarną, nie koniec pasma.";
+    return "";
+  }
+
+  function check(){
+    if(answered) return;
+    answered=true; tot++;
+    const a=num(lo.value), b=num(hi.value);
+    const okLo=a===cur.lo, okHi=b===cur.hi;
+    checkBtn.hidden=true; nextBtn.hidden=false;
+    if(okLo&&okHi){
+      hit++;
+      say(out,true,"<b>"+cur.lo+" – "+cur.hi+" "+cur.unit+"</b> — dokładnie tak.");
+    }else{
+      let m="Poprawnie: <b>"+cur.lo+" – "+cur.hi+" "+cur.unit+"</b>.";
+      if(okLo&&!okHi) m+="<br>Dolną masz. Poleciała górna"+(b!==null?(" — podałeś "+b+"."):".")+
+        (b!==null?internalHint(b):"");
+      else if(!okLo&&okHi) m+="<br>Górną masz, dolna nie zgadza się.";
+      else m+="<br>Obie rozminęły się.";
+      if(cur.cls==="warc") m+="<br>To pasmo WARC — dolna do zapamiętania, górna to <b>"+
+        (cur.hi-cur.lo)+" kHz wyżej</b>.";
+      if(cur.cls==="vhf") m+="<br>Region 1. Wariant amerykański ("+
+        (cur.name==="6 m"?"50–54":"144–148")+") jest w puli dystraktorem.";
+      say(out,false,m);
+    }
+    sc.textContent="trafione "+hit+" / "+tot;
+    nextBtn.focus();
+  }
+
+  checkBtn.onclick=check; nextBtn.onclick=serve;
+  [lo,hi].forEach(el=>el.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ e.preventDefault(); answered?serve():check(); }
+  }));
+  serve();
+})();
+
+/* ---------- DRYL B ---------- */
+(function(){
+  let queue=[], cur=null, hit=0, tot=0;
+  const box=$("bOpts"), out=$("bVerdict"), sc=$("bScore");
+
+  function serve(){
+    if(!queue.length) queue=shuffled(NUMS);
+    cur=queue.pop();
+    $("bNum").textContent=cur[0];
+    $("bUnit").textContent="kHz";
+    out.innerHTML=""; box.innerHTML="";
+    ["zew","wew","brak"].forEach(k=>{
+      const b=document.createElement("button"); b.className="opt"; b.textContent=B_LABELS[k];
+      b.onclick=()=>pick(k,b); box.appendChild(b);
+    });
+  }
+  function pick(k,btn){
+    tot++;
+    [...box.children].forEach(c=>c.disabled=true);
+    const ok = k===cur[1];
+    if(ok){ hit++; btn.classList.add("pick-ok"); }
+    else{
+      btn.classList.add("pick-bad");
+      [...box.children].forEach(c=>{ if(c.textContent===B_LABELS[cur[1]]) c.classList.add("reveal"); });
+    }
+    say(out, ok, "<b>"+cur[0]+"</b> — "+cur[2]+".");
+    sc.textContent="trafione "+hit+" / "+tot;
+    const nb=document.createElement("button");
+    nb.textContent="Następne →"; nb.className="primary"; nb.style.marginTop="12px";
+    nb.onclick=serve; out.appendChild(nb); nb.focus();
+  }
+  serve();
+})();
+
+/* ---------- DRYL C ---------- */
+(function(){
+  let queue=[], cur=null, hit=0, tot=0;
+  const box=$("cOpts"), out=$("cVerdict"), sc=$("cScore");
+
+  function serve(){
+    if(!queue.length) queue=shuffled(POOL);
+    cur=queue.pop();
+    $("cQ").innerHTML='<span class="dim mono" style="font-size:.8rem">pyt. '+cur.n+'</span><br>'+
+      'Zakres częstotliwości przeznaczony dla służby amatorskiej w paśmie <span class="band">'+cur.b+'</span> to:';
+    out.innerHTML=""; box.innerHTML="";
+    cur.o.forEach((t,i)=>{
+      const b=document.createElement("button"); b.className="opt";
+      b.textContent=LET[i]+".  "+t;
+      b.onclick=()=>pick(i,b); box.appendChild(b);
+    });
+  }
+  function pick(i,btn){
+    tot++;
+    [...box.children].forEach(c=>c.disabled=true);
+    const ok = i===cur.ok;
+    if(ok){ hit++; btn.classList.add("pick-ok"); }
+    else{ btn.classList.add("pick-bad"); box.children[cur.ok].classList.add("reveal"); }
+    let m = ok ? "<b>"+LET[cur.ok]+"</b> — tak."
+               : "Poprawnie <b>"+LET[cur.ok]+". "+cur.o[cur.ok]+"</b>.";
+    if(cur.hint) m += "<br>"+cur.hint;
+    say(out, ok, m);
+    sc.textContent="trafione "+hit+" / "+tot;
+    const nb=document.createElement("button");
+    nb.textContent="Następne →"; nb.className="primary"; nb.style.marginTop="12px";
+    nb.onclick=serve; out.appendChild(nb); nb.focus();
+  }
+  serve();
+})();
+</script>
+</main>
+</body>
+</html>
